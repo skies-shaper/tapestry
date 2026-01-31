@@ -1,4 +1,12 @@
-// import keyHandler from "./keyhandler"
+import keyHandler from "./keyhandler.js"
+
+keyHandler.setKeyBindings({
+    "moveUp": ["KeyW", "ArrowUp"],
+    "moveDown": ["KeyS", "ArrowDown"],
+    "moveLeft": ["KeyA", "ArrowLeft"],
+    "moveRight": ["KeyD", "ArrowRight"],
+    "throw": ["MouseLeft", "Space"],
+})
 
 const gameScreenCvs = document.getElementById("gamescreen")
 const canvas = gameScreenCvs.getContext("2d")
@@ -47,6 +55,7 @@ function _gameLoop() {
 function countTPS() {
     return setInterval(() => {
         realTPS = _realTPSCounter;
+        //console.debug(realTPS)
         _realTPSCounter = 0;
     }, 1000)
 }
@@ -107,7 +116,7 @@ function renderWorld() {
 }
 
 sizeCvs()
-window.onresize = sizeCvs
+window.addEventListener("resize", sizeCvs)
 
 let player = {
     x: 0,
@@ -140,40 +149,6 @@ function sizeCvs() {
     }
 }
 
-function fillRect(x, y, w, h) {
-    canvas.fillRect(x * gameConsts.scale, y * gameConsts.scale, w * gameConsts.scale, h * gameConsts.scale)
-}
-
-function setFont(font) {
-    canvas.font = font.substring(0, font.indexOf("p")) * gameConsts.scale + "px Verdana"
-}
-
-function drawText(str, x, y, maxWidth) {
-    if (typeof maxWidth == 'undefined') {
-        canvas.fillText(str, x * gameConsts.scale, y * gameConsts.scale)
-    }
-    canvas.fillText(str, x * gameConsts.scale, y * gameConsts.scale, maxWidth * gameConsts.scale)
-}
-function drawImage(x, y, w, h, src, round) {
-    if (typeof src === "undefined") {
-        return
-    }
-    if (typeof round !== "undefined") {
-        try {
-            screen.drawImage(document.getElementById(src), Math.floor(x * gameConsts.scale), Math.floor(y * gameConsts.scale), Math.ceil(w * gameConsts.scale), Math.ceil(h * gameConsts.scale))
-        }
-        catch (e) {
-            console.log("Image source not found: " + src)
-        }
-        return;
-    }
-    try {
-        screen.drawImage(document.getElementById(src), x * gameConsts.scale, y * gameConsts.scale, w * gameConsts.scale, h * gameConsts.scale)
-    }
-    catch (e) {
-        console.log("Image source not found: " + src + e.stack)
-    }
-}
 let buttonEvents = {}
 let buttonignoresignals = {}
 
@@ -208,3 +183,41 @@ function addButton(id, src, x, y, w, h, callback, options) {
 function mouseInArea(sX, sY, eX, eY) {
     return (mouseX > sX && mouseX < eX && mouseY > sY && mouseY < eY)
 }
+
+function fillRect(x, y, w, h) {
+    canvas.fillRect(x * gameConsts.scale, y * gameConsts.scale, w * gameConsts.scale, h * gameConsts.scale)
+}
+
+function setFont(font) {
+    canvas.font = font.substring(0, font.indexOf("p")) * gameConsts.scale + "px Verdana"
+}
+
+function drawText(str, x, y, maxWidth) {
+    if (typeof maxWidth == 'undefined') {
+        canvas.fillText(str, x * gameConsts.scale, y * gameConsts.scale)
+    }
+    canvas.fillText(str, x * gameConsts.scale, y * gameConsts.scale, maxWidth * gameConsts.scale)
+}
+
+function drawImage(x, y, w, h, src, round) {
+    if (typeof src === "undefined") {
+        return
+    }
+    if (typeof round !== "undefined") {
+        try {
+            screen.drawImage(document.getElementById(src), Math.floor(x * gameConsts.scale), Math.floor(y * gameConsts.scale), Math.ceil(w * gameConsts.scale), Math.ceil(h * gameConsts.scale))
+        }
+        catch (e) {
+            console.log("Image source not found: " + src)
+        }
+        return;
+    }
+    try {
+        screen.drawImage(document.getElementById(src), x * gameConsts.scale, y * gameConsts.scale, w * gameConsts.scale, h * gameConsts.scale)
+    }
+    catch (e) {
+        console.log("Image source not found: " + src + e.stack)
+    }
+}
+
+export { fillRect, setFont, drawText, drawImage };
