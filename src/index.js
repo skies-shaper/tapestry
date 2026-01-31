@@ -1,11 +1,15 @@
+import { Vec } from "./utils.js"
+import { moveRectCollideMovingRect, rectRectOverlap } from "./collisions.js"
+
 import keyHandler from "./keyhandler.js"
 
 keyHandler.setKeyBindings({
-    "moveUp": ["KeyW", "ArrowUp"],
-    "moveDown": ["KeyS", "ArrowDown"],
+    //"moveUp": ["KeyW", "ArrowUp"],
+    //"moveDown": ["KeyS", "ArrowDown"],
     "moveLeft": ["KeyA", "ArrowLeft"],
     "moveRight": ["KeyD", "ArrowRight"],
-    "throw": ["MouseLeft", "Space"],
+    'jump': ['Space'],
+    "throw": ["MouseLeft"],
 })
 
 const gameScreenCvs = document.getElementById("gamescreen")
@@ -34,6 +38,47 @@ let realTPS = 0;
 
 let totalTicks = 0;
 
+let templateLevel = {
+    eyePositions: [],
+    platforms: [],
+    backgroundSRC: "",
+    features: []
+}
+let templatePlatform = {
+    src: "",
+
+    pos: { x: 300, y: 300 },
+    vel: { x: 0, y: 0 },
+    size: { x: 100, y: 60 },
+}
+
+let platforms = [ 
+    templatePlatform 
+]
+
+let level;
+
+const COYOTE_TIME = 5
+
+const JUMP_VEL = 300
+
+const AIR_FRICTION = 0.8
+const GROUND_FRICTION = 0.95
+
+const GRAVITY_ACCEL = 200
+const MOVE_ACCEL = 200
+
+let player = {
+    pos: { x: 300, y: 200 }, // CENTER
+    vel: { x: 0, y: 0 },
+    size: { x: 35, y: 55 },
+
+    jumpTime: 0, // stores coyote time
+
+    frame: 0,
+    maxFrames: 5,
+}
+
 _gameLoop()
 countTPS()
 
@@ -61,34 +106,84 @@ function countTPS() {
 }
 
 function update(dt) {
-    renderBG()
+    updatePlayer(dt)
+
+    render()
 }
 
-let templateLevel = {
-    eyePositions: [],
-    platforms: [],
-    backgroundSRC: "",
-    features: []
-}
-let templatePlatform = {
-    src: "",
-    width: 0,
-    height: 0,
-    x: 0,
-    y: 0
-}
-let level
 function render() {
+    renderBG()
 
+    fillRect(player.pos.x - player.size.x/2, player.pos.y - player.size.y/2, 
+        player.size.x, player.size.y)
+
+    for (const platform of platforms) {
+        fillRect(platform.pos.x - platform.size.x/2, platform.pos.y - platform.size.y/2, 
+            platform.size.x, platform.size.y)
+    }
 }
 
-function updatePhysics() { }
-function playerPhysics() {
-    //gravity
-    //move based on keys?
-    //check collision against each platform (use templatePlatform's values for the thingies)
 
+function updatePlayer(dt) {
+    // check if grounded (check collision rect below player)
+    const groundedHitboxPos = Vec.copy(player.pos)
+    groundedHitboxPos.y += player.size.y/2 + 1
 
+    const grounded = platforms.some(platform => rectRectOverlap(
+        groundedHitboxPos, { x: player.size.x - 2, y: 1 }, 
+        platform.pos, platform.size)
+    )
+
+    if (grounded) player.jumpTime = COYOTE_TIME;
+
+    // apply impulses/update velocity
+
+    // moving 
+    let moveX = 0;
+    if (keyHandler.keyStates.has('moveLeft')) moveX--;
+    if (keyHandler.keyStates.has('moveRight')) moveX++; 
+
+    player.vel.x += moveX * MOVE_ACCEL * dt;
+
+    // jumping
+    if (player.jumpTime > 0) {
+        player.jumpTime -= dt;
+
+        if (keyHandler.keyStates.has('jump')) {
+            player.jumpTime = 0;
+
+            player.vel.y -= JUMP_VEL;
+        }
+    }
+
+    // gravity
+    if (!grounded) player.vel.y += GRAVITY_ACCEL * dt
+
+    // friction
+    player.vel = Vec.scale(player.vel, Math.pow(1 - (grounded? GROUND_FRICTION : AIR_FRICTION), dt))
+
+    // update position, handling collisions
+    let dPos = Vec.scale(player.vel, dt);
+
+    for (const platform of platforms) {
+        const [nPos, collided] = moveRectCollideMovingRect(
+            player.pos, dPos, player.size, 
+            platform.pos, platform.vel, platform.size
+        )
+
+        dPos = Vec.sub(nPos, player.pos)
+
+        // set velocity to zero if collided
+        if (collided.x) player.vel.x = 0;
+        if (collided.y) player.vel.y = 0;
+    }
+
+    player.pos = Vec.add(player.pos, dPos);
+
+    // if still colliding, player has been squished
+    if (platforms.some(platform => rectRectOverlap(player.pos, player.size, platform.pos, platform.size))) {
+        // kill player
+    }
 }
 
 function tape() {
@@ -117,15 +212,6 @@ function renderWorld() {
 
 sizeCvs()
 window.addEventListener("resize", sizeCvs)
-
-let player = {
-    x: 0,
-    y: 0,
-    frame: 0,
-    maxFrames: 5,
-    width: 35,
-    height: 55
-}
 
 
 function sizeCvs() {
