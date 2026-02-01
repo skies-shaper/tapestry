@@ -31,7 +31,7 @@ const HOWLER_POS_SCALE = 0.01
 
 const lowBubble = new Howl({
     src: ['/public/bubbleloop.m4a'],
-    volume: 0.1,
+    volume: 0.05,
     rate: .7
 })
 
@@ -161,14 +161,16 @@ let templateLevel = {
 
     ],
     tentacleTraps: [
-        [430, 380],
-        [500, 380]
+        { pos: { x: 430, y: 380 }, size: { x: 70, y: 70 }, axis: 'y', dir: -1 },
+        { pos: { x: 500, y: 380 }, size: { x: 70, y: 70 }, axis: 'y', dir: -1 },
+        { pos: { x: 300, y: 300 }, size: { x: 70, y: 70 }, axis: 'y', dir: -1 },
     ],
     backgroundSRC: "",
     features: [],
     respawnPosition: [50, 250],
-    blockerY: 200,
-    initialBlockerY: 200,
+    blockerY: 280, // bottom
+    blockerSize: { x: 25, y: 150 },
+    initialBlockerY: 280, // bottom
     blocked: false,
     text: [
         [250, 100, "Welcome to Tapestry!", "#897e61", 30],
@@ -179,7 +181,6 @@ let templateLevel = {
         [250, 190, "in order to be freed from each level", "#897e61", 20],
     ],
     maxTapes: -1
-
 }
 let templateLevel2 = {
     eyePositions: [[300, 200, 0, true], [600, 100, 3, true]],
@@ -204,8 +205,8 @@ let templateLevel2 = {
 
     ],
     tentacleTraps: [
-        [430, 380],
-        [500, 380]
+        { pos: { x: 430, y: 380 }, size: { x: 70, y: 70 }, axis: 'y', dir: -1 },
+        { pos: { x: 500, y: 380 }, size: { x: 70, y: 70 }, axis: 'y', dir: -1 },
     ],
     text: [
         [250, 100, "Hold-click to swing with your tape!", "#897e61", 20],
@@ -215,8 +216,9 @@ let templateLevel2 = {
     backgroundSRC: "",
     features: [],
     respawnPosition: [50, 250],
-    blockerY: 200,
-    initialBlockerY: 200,
+    blockerY: 280, // bottom
+    blockerSize: { x: 25, y: 75 },
+    initialBlockerY: 280,
     blocked: false,
     maxTapes: 6
 }
@@ -323,10 +325,6 @@ gameScreenCvs.addEventListener("mousemove", (event) => {
     mouseY = event.offsetY / gameConsts.scale * window.devicePixelRatio
 })
 
-function initGame() {
-    nextLevel()
-}
-
 function _gameLoop() {
     if (_stopGameLoop) return;
 
@@ -416,7 +414,7 @@ function update(dt) {
     }
     addButton("#begin", "buttons-begin", 400 - (284 / 2), (300), 285, 85, () => {
         inGameplay = true
-        nextLevel()
+        resetLevel()
     })
 
     setFont("30px Lacquer")
@@ -445,6 +443,7 @@ function drawTapeHUD() {
 
 
 }
+
 function drawTape(dt) {
     //calculate tape position
     if (!tape.launched) {
@@ -476,6 +475,12 @@ function drawTape(dt) {
 
     } else {
         const curParticle = tape.particles[tape.particles.length - 1];
+        if (!curParticle) {
+            tape.launched = false;
+            tape.hit = false
+            tape.released = true;
+            return;
+        }
 
         if (!tape.released) {
             if (!keyHandler.keyStates.has('throwTape')) tape.released = true;
@@ -533,6 +538,10 @@ function drawTape(dt) {
     }
     drawImage(tape.pos.x - 20, tape.pos.y - 20, 40, 40, "tape")
 }
+
+keyHandler.onInputDown('reset', () => {
+    if (inGameplay) resetLevel();
+})
 
 
 function updatePlayer(dt) {
@@ -631,12 +640,9 @@ function updatePlayer(dt) {
 
     player.pos = Vec.add(player.pos, dPos);
 
-    if (player.pos.y > 450 || keyHandler.keyStates.has("reset")) {
-        player.pos.x = level.data.respawnPosition[0]
-        player.pos.y = level.data.respawnPosition[1]
-        tape.particles = []
-        level.blocked = true
-        level.data.blockerY = level.data.initialBlockerY
+    if (player.pos.y > 450) {
+        resetLevel()
+
         return
     }
     if (player.pos.x < 0) {
@@ -647,7 +653,6 @@ function updatePlayer(dt) {
         console.log("over")
 
         if (level.blocked) {
-            console.log("stop")
             player.pos.x = 760
         }
         else {
@@ -715,11 +720,27 @@ function renderWorld() {
     if (level.data.tentacleTraps != undefined) {
         for (let i = 0; i < level.data.tentacleTraps.length; i++) {
             let t = level.data.tentacleTraps
-            drawImage(t[i][0], t[i][1], 70, 70, "Tentacles-" + (animationTicks % 5))
+            drawImage(t[i].pos.x, t[i].pos.y, t[i].size.x, t[i].size.y,
+                `Tentacles-${t[i].axis}-(${t[i].dir})-${animationTicks % 5}`)
+
+            const colliderPos = Vec.add(t[i].pos, Vec.div(t[i].size, 2))
+            colliderPos[t[i].axis] -= t[i].dir * 3 / 8 * t[i].size[t[i].axis]
+
+            const colliderSize = Vec.copy(t[i].size)
+            colliderSize[t[i].axis] /= 4;
+
+            if (rectRectOverlaps(player.pos, { x: player.size.x * 0.4, y: player.size.y }, colliderPos, colliderSize)) {
+                // died
+                resetLevel()
+            }
+
             if (!lowBubble.playing()) { lowBubble.play() }
         }
     }
-    drawImage(775, level.data.blockerY, 25, 75, "Door-" + (animationTicks % 5))
+
+    drawImage(775, level.data.blockerY - level.data.blockerSize.y,
+        level.data.blockerSize.x, level.data.blockerSize.y,
+        "Door-" + (animationTicks % 5))
 
     for (let i = 0; i < platforms.length; i++) {
 
@@ -732,36 +753,49 @@ function renderWorld() {
             platforms[i].src)
     }
     if (level.numMaskedEyes == 0) {
+        level.data.blockerY += 0.03 * level.data.blockerSize.y
         if (!descendingGate.playing()) { descendingGate.play() }
-        level.data.blockerY += 2
     } else {
         level.data.blockerY = level.data.initialBlockerY
         descendingGate.stop()
     }
-    if (level.data.blockerY - level.data.initialBlockerY > 75) {
+    if (level.data.blockerY - level.data.initialBlockerY > level.data.blockerSize.y) {
         level.blocked = false
         descendingGate.stop()
     }
 }
-function nextLevel() {
-    if (level.ID >= levelStorage.length) {
-        WON = true
-        return
-    }
-    console.log(":DD")
-    level.data = levelStorage[level.ID]
-    level.backgroundOffset = Math.floor(Math.random() * 800)
-    platforms = level.data.platforms
+
+
+function resetLevel() {
+    console.log("Reset level", level.ID)
+
     console.log(level)
-    level.ID++
+
+    level.data = levelStorage[level.ID]
+    platforms = level.data.platforms
+
     player.pos.x = level.data.respawnPosition[0]
     player.pos.y = level.data.respawnPosition[1]
     level.numMaskedEyes = level.data.eyePositions.length
     tape.particles = []
+
     level.blocked = true
     if (level.data.numTapes != -1) {
         player.numTapes = level.data.maxTapes
     }
+}
+
+function nextLevel() {
+    console.log(":DD")
+    level.ID++
+    level.backgroundOffset = Math.floor(Math.random() * 800)
+
+    if (level.ID >= levelStorage.length) {
+        WON = true
+        return
+    }
+
+    resetLevel()
 }
 
 sizeCvs()
