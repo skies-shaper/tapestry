@@ -762,7 +762,11 @@ function renderWorld() {
     }
     if (level.numMaskedEyes == 0) {
         level.data.blockerY += 0.03 * level.data.blockerSize.y
-        if (!descendingGate.playing()) { descendingGate.play() }
+        if (!descendingGate.playing()) { 
+            descendingGate.pos(780*HOWLER_POS_SCALE, 
+                (level.data.blockerY - level.data.blockerSize.y/2) * HOWLER_POS_SCALE, 0)
+            descendingGate.play() 
+        }
     } else {
         level.data.blockerY = level.data.initialBlockerY
         descendingGate.stop()
