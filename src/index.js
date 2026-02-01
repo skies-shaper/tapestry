@@ -1,5 +1,5 @@
 import { Vec } from "./utils.js"
-import { moveRectCollideMovingRect, rectRectOverlap } from "./collisions.js"
+import { moveRectCollideMovingRect, rectRectOverlaps } from "./collisions.js"
 
 import keyHandler from "./keyhandler.js"
 
@@ -129,7 +129,7 @@ function updatePlayer(dt) {
     const groundedHitboxPos = Vec.copy(player.pos)
     groundedHitboxPos.y += player.size.y/2 + 1
 
-    const grounded = platforms.some(platform => rectRectOverlap(
+    const grounded = platforms.some(platform => rectRectOverlaps(
         groundedHitboxPos, { x: player.size.x - 2, y: 1 }, 
         platform.pos, platform.size)
     )
@@ -181,7 +181,7 @@ function updatePlayer(dt) {
     player.pos = Vec.add(player.pos, dPos);
 
     // if still colliding, player has been squished
-    if (platforms.some(platform => rectRectOverlap(player.pos, player.size, platform.pos, platform.size))) {
+    if (platforms.some(platform => rectRectOverlaps(player.pos, player.size, platform.pos, platform.size))) {
         // kill player
     }
 }
