@@ -156,8 +156,64 @@ function platform(src, px, py) {
         }
     }
 }
-let level3 = {
-    eyePositions: [[300, 200, 0, true], [600, 100, 3, true]],
+let trickyStairs_lvl = {
+    eyePositions: [[100, 75, 1, true], [600, 75, 2, true]],
+    platforms: [
+        platform(platformTypes.large1, 75, 425),
+
+        platform(platformTypes.large1, 320, 425),
+        platform(platformTypes.large2, 320, 375),
+
+        platform(platformTypes.large1, 560, 425),
+        platform(platformTypes.large2, 560, 375),
+        platform(platformTypes.large1, 560, 310),
+
+
+        platform(platformTypes.large2, 800, 425),
+        platform(platformTypes.large1, 800, 375),
+
+        platform(platformTypes.large2, 850, 30),
+        platform(platformTypes.large1, 850, 90),
+        platform(platformTypes.large2, 850, 150),
+        platform(platformTypes.large1, 850, 210),
+
+        platform(platformTypes.thin, 75, 0),
+        platform(platformTypes.thin, 225, 0),
+        platform(platformTypes.thin, 375, 0),
+        platform(platformTypes.thin, 500, 0),
+        platform(platformTypes.thin, 650, 0),
+        platform(platformTypes.thin, 800, 0),
+
+
+    ],
+    tentacleTraps: [
+        { pos: { x: 570, y: 380 }, size: { x: 70, y: 70 }, axis: 'y', dir: -1 },
+        { pos: { x: 630, y: 380 }, size: { x: 70, y: 70 }, axis: 'y', dir: -1 },
+        { pos: { x: 700, y: 380 }, size: { x: 70, y: 70 }, axis: 'y', dir: -1 },
+
+
+        { pos: { x: 430, y: 380 }, size: { x: 70, y: 70 }, axis: 'y', dir: -1 },
+        { pos: { x: 500, y: 380 }, size: { x: 70, y: 70 }, axis: 'y', dir: -1 },
+        { pos: { x: 360, y: 380 }, size: { x: 70, y: 70 }, axis: 'y', dir: -1 },
+        { pos: { x: 290, y: 380 }, size: { x: 70, y: 70 }, axis: 'y', dir: -1 },
+        { pos: { x: 220, y: 380 }, size: { x: 70, y: 70 }, axis: 'y', dir: -1 },
+        { pos: { x: 150, y: 380 }, size: { x: 70, y: 70 }, axis: 'y', dir: -1 },
+
+    ],
+    text: [
+
+    ],
+    backgroundSRC: "",
+    features: [],
+    respawnPosition: [50, 250],
+    blockerY: 280, // bottom
+    blockerSize: { x: 25, y: 150 },
+    initialBlockerY: 350,
+    blocked: false,
+    maxTapes: 2
+}
+let youonlygottwoshots_lvl = {
+    eyePositions: [[300, 200, 1, true], [600, 100, 4, true]],
     platforms: [
         platform(platformTypes.large1, 75, 425),
 
@@ -241,10 +297,10 @@ let templateLevel2 = {
         platform(platformTypes.large1, 75, 425),
         platform(platformTypes.large2, 225, 425),
         platform(platformTypes.large1, 375, 425),
-        platform(platformTypes.large1, 650, 425),
         platform(platformTypes.large2, 800, 425),
         platform(platformTypes.large1, 800, 360),
         platform(platformTypes.large1, 850, 305),
+
         platform(platformTypes.thin, 75, 0),
         platform(platformTypes.thin, 225, 0),
         platform(platformTypes.thin, 375, 0),
@@ -260,6 +316,9 @@ let templateLevel2 = {
     tentacleTraps: [
         { pos: { x: 430, y: 380 }, size: { x: 70, y: 70 }, axis: 'y', dir: -1 },
         { pos: { x: 500, y: 380 }, size: { x: 70, y: 70 }, axis: 'y', dir: -1 },
+        { pos: { x: 570, y: 380 }, size: { x: 70, y: 70 }, axis: 'y', dir: -1 },
+        { pos: { x: 640, y: 380 }, size: { x: 70, y: 70 }, axis: 'y', dir: -1 },
+
     ],
     text: [
         [250, 100, "Hold-click to swing with your tape!", "#897e61", 20],
@@ -281,7 +340,7 @@ let platforms = [
 ]
 
 let levelStorage = [
-    templateLevel, templateLevel2, level3
+    templateLevel, templateLevel2, youonlygottwoshots_lvl, trickyStairs_lvl
 ]
 
 let level = {
@@ -466,10 +525,10 @@ function update(dt) {
         canvas.ellipse(drawX * gameConsts.scale, drawY * gameConsts.scale, 5 * gameConsts.scale, 5 * gameConsts.scale, 0, 0, 2 * Math.PI)
         canvas.fill()
     }
-    addButton("#begin", "buttons-begin", 400 - (284 / 2), (300), 285, 85, () => {
-        inGameplay = true
-        resetLevel()
-    })
+    // addButton("#begin", "buttons-begin", 400 - (284 / 2), (300), 285, 85, () => {
+    //     inGameplay = true
+    //     resetLevel()
+    // })
 
     setFont("30px Lacquer")
     canvas.fillStyle = "#b8ab88"
@@ -735,7 +794,7 @@ function renderBG() {
             if (t[3]) {
                 numMaskedEyes++
             }
-            drawImage(t[0], t[1], 100, 100, "Eye-" + (t[3] ? "" : "faded-") + t[2])
+            drawImage(t[0], t[1], 100, 100, "Eye-" + (t[3] ? "" : "faded-") + Math.min(t[2], 4))
             let xComp = (player.pos.x) - t[0]
             let yComp = (player.pos.y) - t[1]
 
