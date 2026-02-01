@@ -310,7 +310,6 @@ function update(dt) {
         canvas.fillStyle = "#ffffff"
         fillRect(0, 0, 800, 450)
         renderBG()
-        applyVignette()
 
 
         renderObjects() //render animations etc
@@ -532,6 +531,8 @@ function renderBG() {
     //render background of
     //
     drawImage(0 - level.backgroundOffset, 0, 1600, 450, "BG")
+    applyVignette()
+
     let numMaskedEyes = 0
     if (level.data.eyePositions != undefined) {
         for (let i = 0; i < level.data.eyePositions.length; i++) {
