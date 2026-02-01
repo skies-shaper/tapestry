@@ -30,6 +30,10 @@ const footstepSFX = new Howl({
     src: ['/public/footstep.wav'],
     volume: 0.7,
 })
+const tapeRip = new Howl({
+    src: ['/public/tape-rip.m4a'],
+    volume: 10,
+})
 
 const landSFX = new Howl({
     src: ['/public/land.wav'],
@@ -245,6 +249,8 @@ window.addEventListener("mousedown", (e) => {
     if (!tape.launched && inGameplay) {
 
         tape.launched = true
+        tapeRip.pos(tape.x, tape.y)
+        tapeRip.play()
         // tape.theta = tape.theta * -1
         // tape.vX = Math.cos(tape.theta) * 20
         // if (tape.x + 20 < player.pos.x + 30) {
