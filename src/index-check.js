@@ -8,21 +8,25 @@ keyHandler.setKeyBindings({
     //"moveDown": ["KeyS", "ArrowDown"],
     "moveLeft": ["KeyA", "ArrowLeft"],
     "moveRight": ["KeyD", "ArrowRight"],
+    "throw": ["MouseLeft"],
     'jump': ['Space', 'ArrowUp', 'KeyW'],
 })
 
-let inGameplay = false
 const gameScreenCvs = document.getElementById("gamescreen")
 const canvas = gameScreenCvs.getContext("2d")
 
-let buttonEvents = []
-let buttonignoresignals = {}
 let gameConsts = {
     width: 800,
     height: 450,
     scale: 1
 }
 let mouseX, mouseY;
+
+gameScreenCvs.addEventListener("mousemove", (event) => {
+    mouseX = event.offsetX / gameConsts.scale
+    mouseY = event.offsetY / gameConsts.scale
+})
+
 let tape = {
     launched: false,
     x: 0,
@@ -30,8 +34,8 @@ let tape = {
     vX: 0,
     vY: 0,
     theta: 0,
+    particles: [],
     radius: 20,
-    particles: []
 }
 
 const TPS = 30
@@ -44,7 +48,15 @@ let _realTPSCounter = 0;
 let realTPS = 0;
 
 let totalTicks = 0;
+
 let animationTicks = 0
+
+let templateLevel = {
+    eyePositions: [],
+    platforms: [],
+    backgroundSRC: "",
+    features: []
+}
 let templatePlatform = {
     src: "platform-rock-large-2",
     pos: { x: 300, y: 300 },
@@ -53,104 +65,16 @@ let templatePlatform = {
     imgSize: { x: 175, y: 75 }
 }
 
-let platformTypes = {
-    large1: 0,
-    large2: 1,
-    thin: 2
-}
-
-function platform(src, px, py) {
-    if (src == platformTypes.large2)
-        return {
-            src: "platform-rock-large-2",
-            pos: { x: px, y: py },
-            vel: { x: 0, y: 0 },
-            size: { x: 165, y: 65 },
-            imgSize: { x: 175, y: 75 }
-        }
-    if (src == platformTypes.large1) {
-        return {
-            src: "platform-rock-large-1",
-            pos: { x: px, y: py },
-            vel: { x: 0, y: 0 },
-            size: { x: 165, y: 65 },
-            imgSize: { x: 175, y: 75 }
-        }
-    }
-    if (src == platformTypes.thin) {
-        return {
-            src: "platform-rock-small",
-            pos: { x: px, y: py },
-            vel: { x: 0, y: 0 },
-            size: { x: 165, y: 25 },
-            imgSize: { x: 175, y: 30 }
-        }
-    }
-}
-
-let templateLevel = {
-    eyePositions: [[200, 200, 0, true], [150, 100, 3, true]],
-    platforms: [
-        platform(platformTypes.large1, 75, 425),
-        platform(platformTypes.large2, 225, 425),
-        platform(platformTypes.large1, 375, 425),
-        platform(platformTypes.large1, 650, 425),
-        platform(platformTypes.large2, 800, 425),
-        platform(platformTypes.large1, 800, 360),
-        platform(platformTypes.large1, 850, 305),
-    ],
-    tentacleTraps: [
-        [430, 380],
-        [500, 380]
-    ],
-    backgroundSRC: "",
-    features: [],
-    respawnPosition: [50, 250],
-    blockerY: 200,
-    initialBlockerY: 200,
-    blocked: false
-}
-let templateLevel2 = {
-    eyePositions: [[300, 200, 0, true], [600, 100, 3, true]],
-    platforms: [
-        platform(platformTypes.large1, 75, 425),
-        platform(platformTypes.large2, 225, 425),
-        platform(platformTypes.large1, 375, 425),
-        platform(platformTypes.large1, 650, 425),
-        platform(platformTypes.large2, 800, 425),
-        platform(platformTypes.large1, 800, 360),
-        platform(platformTypes.large1, 850, 305),
-    ],
-    tentacleTraps: [
-        [430, 380],
-        [500, 380]
-    ],
-    backgroundSRC: "",
-    features: [],
-    respawnPosition: [50, 250],
-    blockerY: 200,
-    initialBlockerY: 200,
-    blocked: false
-}
-
 let platforms = [
-    templatePlatform
+    templatePlatform,
+
 ]
 
-let levelStorage = [
-    templateLevel, templateLevel2
-]
-
-let level = {
-    ID: 0,
-    backgroundOffset: 0,
-    numMaskedEyes: 0,
-    data: {}
-};
+let level;
 
 const COYOTE_TIME = 5
 
-const JUMP_VEL = 500
+const JUMP_VEL = 400
 
 const AIR_FRICTION = 0.8
 const GROUND_FRICTION = 0.95
@@ -160,6 +84,7 @@ const MOVE_ACCEL = 200
 
 let player = {
     direction: 1,
+
     pos: { x: 300, y: 200 }, // CENTER
     vel: { x: 0, y: 0 },
     size: { x: 35, y: 55 },
@@ -168,6 +93,7 @@ let player = {
 
     frame: 0,
     maxFrames: 5,
+
     frame: 0,
     width: 35,
     height: 55,
@@ -199,39 +125,34 @@ let player = {
 
     ]
 }
+
 window.addEventListener("mousedown", (e) => {
-    if (!tape.launched && inGameplay) {
+    if (!tape.launched) {
 
         tape.launched = true
-        // tape.theta = tape.theta * -1
-        // tape.vX = Math.cos(tape.theta) * 20
-        // if (tape.x + 20 < player.pos.x + 30) {
-        //     tape.vX = Math.cos(tape.theta) * -20
+        tape.theta = tape.theta * -1
+        tape.vX = Math.cos(tape.theta) * 15
+        if (tape.x + 20 < player.pos.x + 30) {
+            tape.vX = Math.cos(tape.theta) * -15
 
-        // }
+        }
 
-        // tape.vY = Math.sin(tape.theta) * -10
-        // if (tape.x + 20 < player.pos.x + 30) {
-        //     tape.vY = Math.sin(tape.theta) * 10
-        // }
-        tape.particles.push([[player.pos.x + 10, player.pos.y + 10], []])
+        tape.vY = Math.sin(tape.theta) * -5
+        if (tape.x + 20 < player.pos.x + 30) {
+            tape.vY = Math.sin(tape.theta) * 5
+        }
+        tape.particles.push([[player.pos.x + 30, player.pos.y + 30], []])
         // tape.x = player.pos.x + 40
         // tape.y = player.pos.y + 50
     }
 })
-_gameLoop()
-countTPS()
-
-
-
 gameScreenCvs.addEventListener("mousemove", (event) => {
     mouseX = event.offsetX / gameConsts.scale * window.devicePixelRatio
     mouseY = event.offsetY / gameConsts.scale * window.devicePixelRatio
 })
 
-function initGame() {
-    nextLevel()
-}
+_gameLoop()
+countTPS()
 
 function _gameLoop() {
     if (_stopGameLoop) return;
@@ -258,55 +179,19 @@ function countTPS() {
 }
 
 function update(dt) {
-    if (inGameplay) {
-        if (totalTicks % 3 == 0) {
-            animationTicks++
-        }
-        canvas.fillStyle = "#ffffff"
-        fillRect(0, 0, 800, 450)
-        renderBG()
+    updatePlayer(dt)
 
-        renderObjects() //render animations etc
-        renderWorld()
-
-        updatePlayer(dt)
-        return
+    renderBG()
+    if (totalTicks % 3 == 0) {
+        animationTicks++
     }
-    // otherwise, main menu!
-    drawImage(0 - 350 * (Math.sin(totalTicks / 700) + 1), 0, 1600, 450, "BG")
-    drawImage(0, 0, 800, 400, "title")
-    let titleEyes = [[50, 200, 0], [150, 300, 1], [400, 200, 2], [600, 200, 3], [550, 270, 4]]
+    canvas.fillStyle = "#ffffff"
+    fillRect(0, 0, 800, 450)
 
-    for (let i = 0; i < titleEyes.length; i++) {
-        let t = titleEyes[i]
-        drawImage(t[0], t[1], 100, 100, "Eye-" + t[2])
-        let xComp = (mouseX) - t[0]
-        let yComp = (mouseY) - t[1]
-
-        let unitX = xComp / Math.pow((xComp * xComp) + (yComp * yComp), .5)
-        let unitY = yComp / Math.pow((xComp * xComp) + (yComp * yComp), .5)
-
-        let drawX = (10 * unitX + t[0]) + 50
-        let drawY = (10 * unitY + t[1]) + 50
-        canvas.fillStyle = "red"
-        canvas.beginPath()
-        canvas.ellipse(drawX * gameConsts.scale, drawY * gameConsts.scale, 5 * gameConsts.scale, 5 * gameConsts.scale, 0, 0, 2 * Math.PI)
-        canvas.fill()
-    }
-    addButton("#begin", "buttons-begin", 400 - (284 / 2), (300), 285, 85, () => {
-        inGameplay = true
-        nextLevel()
-    })
-
-    setFont("30px Fredoka")
-    canvas.fillStyle = "#b8ab88"
-
-    let text = "A normal game about a racoon"
-
-    drawText(text, 400 - (canvas.measureText(text).width / 2 / gameConsts.scale), 150)
-
-
+    renderObjects() //render animations etc
+    renderWorld()
 }
+
 function drawTape() {
     //calculate tape position
     if (!tape.launched) {
@@ -318,41 +203,46 @@ function drawTape() {
         canvas.strokeStyle = "#ababab"
 
         canvas.beginPath()
-        canvas.ellipse((player.pos.x) * gameConsts.scale, (player.pos.y) * gameConsts.scale, 100 * gameConsts.scale, 100 * gameConsts.scale, 0, 0, (2 * Math.PI))
+        canvas.ellipse((player.pos.x + 30) * gameConsts.scale, (player.pos.y + 30) * gameConsts.scale, 100 * gameConsts.scale, 100 * gameConsts.scale, 0, 0, (2 * Math.PI))
         canvas.stroke()
 
-        let xComp = (mouseX) - (player.pos.x)
-        let yComp = (mouseY) - (player.pos.y)
+        //vector from player to mouse
+        //clip at 175 game units
+        // draw tape there
+
+        let xComp = (mouseX) - (player.pos.x + 30)
+        let yComp = (mouseY) - (player.pos.y + 30)
 
         let unitX = xComp / Math.pow((xComp * xComp) + (yComp * yComp), .5)
         let unitY = yComp / Math.pow((xComp * xComp) + (yComp * yComp), .5)
 
-        tape.x = (100 * unitX + player.pos.x) - 20
-        tape.y = (100 * unitY + player.pos.y) - 20
+        tape.x = (100 * unitX + player.pos.x + 30) - 20
+        tape.y = (100 * unitY + player.pos.y + 30) - 20
         if (isNaN(tape.x)) {
-            tape.x = (100 + player.pos.x + 30)
-            tape.y = player.pos.y + 30
+            tape.x = (100 + player.pos.x + 30) - 20
+            tape.y = player.pos.y + 30 - 20
         }
-        tape.vX = unitX * 13
-        tape.vY = unitY * 13
+        tape.theta = Math.atan(unitY / unitX)
     } else {
-        tape.particles[tape.particles.length - 1][1][0] = tape.x + 20
-        tape.particles[tape.particles.length - 1][1][1] = tape.y + 20
+        tape.particles[tape.particles.length - 1][1][0] = tape.x + 10
+        tape.particles[tape.particles.length - 1][1][1] = tape.y + 25
         tape.x += tape.vX
         tape.y += tape.vY
-        // tape.vY += 0.5
-        if (tape.y >= 450 || tape.y < -20 || tape.x < -20 || tape.y > 800) {
+        tape.vY += 0.5
+        if (tape.y >= 450) {
             tape.launched = false
         }
+
+        // COLLISION
 
         const colliding = platforms.some(platform => rectCircleOverlaps(platform.pos, platform.size,
             { x: tape.x, y: tape.y }, tape.radius));
 
         if (colliding) {
-
             tape.launched = false;
         }
     }
+    drawImage(tape.x, tape.y, 40, 40, "tape")
     //tape collision
     canvas.strokeStyle = "#b8ab88"
 
@@ -365,12 +255,10 @@ function drawTape() {
         canvas.lineTo(tape.particles[i][1][0] * gameConsts.scale, tape.particles[i][1][1] * gameConsts.scale)
         canvas.stroke()
     }
-    drawImage(tape.x, tape.y, 40, 40, "tape")
-
 }
 
-
 function updatePlayer(dt) {
+
     player.moveState = player.moveStates.idle
 
     // check if grounded (check collision rect below player)
@@ -388,6 +276,7 @@ function updatePlayer(dt) {
 
     // moving 
     let moveX = 0;
+
     if (Math.abs(player.vel.x) > 20) {
         player.moveState = player.moveStates.slide
     }
@@ -410,6 +299,7 @@ function updatePlayer(dt) {
     // jumping
     if (player.jumpTime > 0) {
         player.jumpTime -= dt;
+
         if (keyHandler.keyStates.has('jump')) {
             player.jumpTime = 0;
 
@@ -445,20 +335,6 @@ function updatePlayer(dt) {
 
     player.pos = Vec.add(player.pos, dPos);
 
-    if (player.pos.y > 450) {
-        player.pos.x = level.data.respawnPosition[0]
-        player.pos.y = level.data.respawnPosition[1]
-        return
-    }
-
-    if (player.pos.x > 780) {
-        if (level.blocked) {
-            player.pos.x == 780
-        }
-        else {
-            nextLevel()
-        }
-    }
     // if still colliding, player has been squished
     if (platforms.some(platform => rectRectOverlaps(player.pos, player.size, platform.pos, platform.size))) {
         // kill player
@@ -466,70 +342,31 @@ function updatePlayer(dt) {
 }
 
 
+
 function renderBG() {
     //get random 
     //render background of
     //
-    drawImage(0 - level.backgroundOffset, 0, 1600, 450, "BG")
-    let numMaskedEyes = 0
-    if (level.data.eyePositions != undefined) {
-        for (let i = 0; i < level.data.eyePositions.length; i++) {
-            let t = level.data.eyePositions[i]
-            if (t[3]) {
-                numMaskedEyes++
-            }
-            drawImage(t[0], t[1], 100, 100, "Eye-" + (t[3] ? "" : "faded-") + t[2])
-            let xComp = (player.pos.x) - t[0]
-            let yComp = (player.pos.y) - t[1]
-
-            let unitX = xComp / Math.pow((xComp * xComp) + (yComp * yComp), .5)
-            let unitY = yComp / Math.pow((xComp * xComp) + (yComp * yComp), .5)
-
-            let drawX = (10 * unitX + t[0]) + 50
-            let drawY = (10 * unitY + t[1]) + 50
-
-            for (let j = 0; j < tape.particles.length; j++) {
-
-                if (tape.particles[j] === undefined || tape.particles[j][1].length < 1) {
-                    continue
-                }
-
-                let p = tape.particles[j]
-
-                if (lineCircleIntersect(p, [t[0] + 50, t[1] + 50, 30])) {
-                    t[3] = false
-                }
-            }
-
-            canvas.fillStyle = "red"
-            if (t[3]) {
-                canvas.beginPath()
-                canvas.ellipse(drawX * gameConsts.scale, drawY * gameConsts.scale, 5 * gameConsts.scale, 5 * gameConsts.scale, 0, 0, 2 * Math.PI)
-                canvas.fill()
-            }
-
-        }
-        level.numMaskedEyes = numMaskedEyes
-    }
-    else {
-        console.log(level)
-    }
 }
-
 
 function renderHUD() { }
 function renderWorld() {
-    if (level.data.tentacleTraps != undefined) {
-        for (let i = 0; i < level.data.tentacleTraps.length; i++) {
-            let t = level.data.tentacleTraps
-            drawImage(t[i][0], t[i][1], 70, 70, "Tentacles-" + (animationTicks % 5))
-        }
-    }
-    drawImage(775, level.data.blockerY, 25, 75, "Door-" + (animationTicks % 5))
 
+    // for (let i = 0; i < level.eyePositions.length; i++) {
+    //     //draw eye based on i's value
+    // }
     for (let i = 0; i < platforms.length; i++) {
-
+        // let templatePlatform = {
+        //     src: "platform-rock-large-2",
+        //     pos: { x: 300, y: 300 },
+        //     vel: { x: 0, y: 0 },
+        //     size: { x: 150, y: 50 },
+        //     imgSize: { x: 175, y: 75 }
+        // }
         let p = platforms[i]
+        canvas.fillStyle = "blue"
+        fillRect(p.pos.x - p.size.x / 2, p.pos.y - p.size.y / 2, p.size.x, p.size.y)
+
         drawImage(
             p.pos.x - p.imgSize.x / 2,
             p.pos.y - p.imgSize.y / 2,
@@ -537,34 +374,18 @@ function renderWorld() {
             platforms[i].imgSize.y,
             platforms[i].src)
     }
-    if (level.numMaskedEyes == 0) {
-        level.data.blockerY += 2
-    }
-    if (level.data.blockerY - level.data.initialBlockerY > 75) {
-        level.blocked = false
-    }
-}
-function nextLevel() {
-    console.log(":DD")
-    level.data = levelStorage[level.ID]
-    level.backgroundOffset = Math.floor(Math.random() * 800)
-    platforms = level.data.platforms
-    console.log(level)
-    level.ID++
-    player.pos.x = level.data.respawnPosition[0]
-    player.pos.y = level.data.respawnPosition[1]
-    level.numMaskedEyes = level.data.eyePositions.length
-    tape.particles = []
 }
 
 sizeCvs()
-window.onresize = sizeCvs
+
+window.addEventListener("resize", sizeCvs)
 
 
 function sizeCvs() {
     if (window.innerWidth < (window.innerHeight / 450) * 800) {
         gameConsts.width = window.innerWidth
         gameConsts.height = (window.innerWidth / 800) * 450
+
         gameConsts.scale = window.innerWidth / 800 * window.devicePixelRatio
         gameScreenCvs.height = gameConsts.height * window.devicePixelRatio
         gameScreenCvs.width = gameConsts.width * window.devicePixelRatio
@@ -581,6 +402,7 @@ function sizeCvs() {
         gameScreenCvs.style.width = gameConsts.width + "px"
     }
 }
+
 function renderObjects() {
 
     drawTape()
@@ -603,7 +425,7 @@ function renderObjects() {
             frame = "Jelli-1"
     }
     // canvas.fillStyle = "blue"
-    // fillRect(player.pos.x - player.size.x / 2, player.pos.y - player.size.y / 2, player.size.x, player.size.y)
+    fillRect(player.pos.x - player.size.x / 2, player.pos.y - player.size.y / 2, player.size.x, player.size.y)
 
     if (player.direction == -1) {
         canvas.save()
@@ -618,13 +440,16 @@ function renderObjects() {
 
 }
 
+let buttonEvents = {}
+let buttonignoresignals = {}
+
 function addButton(id, src, x, y, w, h, callback, options) {
 
     if (buttonEvents.indexOf(id) == -1) {
         buttonignoresignals[id] = false
 
         buttonEvents.push(id)
-        gameScreenCvs.addEventListener("mouseup", () => {
+        document.getElementById("gamewindow").addEventListener("mouseup", () => {
             if (buttonignoresignals[id]) {
                 buttonignoresignals[id] = false
                 return
@@ -643,7 +468,6 @@ function addButton(id, src, x, y, w, h, callback, options) {
     }
 
     drawImage(x, y, w, h, src)
-
     canvas.filter = "none"
 }
 
@@ -656,7 +480,7 @@ function fillRect(x, y, w, h) {
 }
 
 function setFont(font) {
-    canvas.font = font.substring(0, font.indexOf("p")) * gameConsts.scale + "px Fredoka"
+    canvas.font = font.substring(0, font.indexOf("p")) * gameConsts.scale + "px Verdana"
 }
 
 function drawText(str, x, y, maxWidth) {
@@ -680,61 +504,3 @@ function drawImage(x, y, w, h, src) {
     return;
 }
 
-function lineCircleIntersect(line, circle) {
-    // MANY THANKS to https://stackoverflow.com/questions/1073336/circle-line-segment-collision-detection-algorithm#1084899
-    // (copied from there and modified to use JS)
-
-    //line == [[ax, ay],[bx,by]]
-    //circle == [x,y,r]
-    let d = { x: line[1][0] - line[0][0], y: line[1][1] - line[0][1] }
-    let f = { x: line[0][0] - circle[0], y: line[0][1] - circle[1] }
-
-    let a = Vec.dot(d, d);
-    let b = 2 * Vec.dot(d, f);
-    let c = Vec.dot(f, f) - circle[2] * circle[2];
-
-    let discriminant = b * b - 4 * a * c;
-    if (discriminant < 0) {
-        return false
-        // no intersection
-    }
-    else {
-        // ray didn't totally miss sphere,
-        // so there is a solution to
-        // the equation.
-
-        discriminant = Math.sqrt(discriminant);
-
-        // either solution may be on or off the ray so need to test both
-        // t1 is always the smaller value, because BOTH discriminant and
-        // a are nonnegative.
-        let t1 = (-b - discriminant) / (2 * a);
-        let t2 = (-b + discriminant) / (2 * a);
-
-        // 3x HIT cases:
-        //          -o->             --|-->  |            |  --|->
-        // Impale(t1 hit,t2 hit), Poke(t1 hit,t2>1), ExitWound(t1<0, t2 hit), 
-
-        // 3x MISS cases:
-        //       ->  o                     o ->              | -> |
-        // FallShort (t1>1,t2>1), Past (t1<0,t2<0), CompletelyInside(t1<0, t2>1)
-
-        if (t1 >= 0 && t1 <= 1) {
-            // t1 is the intersection, and it's closer than t2
-            // (since t1 uses -b - discriminant)
-            // Impale, Poke
-            return true;
-        }
-
-        // here t1 didn't intersect so we are either started
-        // inside the sphere or completely past it
-        if (t2 >= 0 && t2 <= 1) {
-            // ExitWound
-            return true;
-        }
-
-        // no intn: FallShort, Past, CompletelyInside
-        return false;
-    }
-}
-export { fillRect, setFont, drawText, drawImage };

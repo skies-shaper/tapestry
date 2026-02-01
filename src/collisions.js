@@ -2,8 +2,8 @@ import { Vec } from "./utils.js"
 
 function moveRectCollideMovingRect(pos1, v1, size1, pos2, v2, size2) {
     // returns: 
-        // the position of rect 1 after moving, 
-        // { whether collision occured on x/y axes }
+    // the position of rect 1 after moving, 
+    // { whether collision occured on x/y axes }
 
     // movement of rect 2 will take priority over rect 1
     // ie. rect 2 will push rect 1 out of the way
@@ -20,7 +20,7 @@ function moveRectCollideMovingRect(pos1, v1, size1, pos2, v2, size2) {
         if (dv[dir] == 0) continue;
 
         // can only collide if above in other axis; continue if not
-        const otherDir = dir == 'x'? 'y' : 'x';
+        const otherDir = dir == 'x' ? 'y' : 'x';
         if (pos1[otherDir] + halfSize1[otherDir] < pos2[otherDir] - halfSize2[otherDir] ||
             pos1[otherDir] - halfSize1[otherDir] > pos2[otherDir] + halfSize2[otherDir])
             continue;
@@ -45,12 +45,12 @@ function moveRectCollideMovingRect(pos1, v1, size1, pos2, v2, size2) {
             collided[dir] = true
 
             // set position to position of rect 2's edge
-            nPos[dir] = edge2 - halfSize1[dir] * Math.sign(dv[dir])
+            nPos[dir] = edge2 - (halfSize1[dir] + 1) * Math.sign(dv[dir])
         }
     }
 
-    return [ nPos, collided ];
-}   
+    return [nPos, collided];
+}
 
 function rectRectOverlaps(pos1, size1, pos2, size2) {
     const halfSize1 = Vec.div(size1, 2)
@@ -68,8 +68,8 @@ function rectCircleOverlaps(rectPos, rectSize, circlePos, circleR) {
     const testPos = Vec.copy(circlePos)
 
     for (const dir of ['x', 'y']) {
-        testPos[dir] = Math.max(rectPos[dir] - rectSize[dir]/2, 
-            Math.min(rectPos[dir] + rectSize[dir]/2, testPos[dir]))
+        testPos[dir] = Math.max(rectPos[dir] - rectSize[dir] / 2,
+            Math.min(rectPos[dir] + rectSize[dir] / 2, testPos[dir]))
     }
 
     return Vec.dist(circlePos, testPos) <= circleR
