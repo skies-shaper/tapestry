@@ -69,6 +69,8 @@ musicStart.play()
 
 let tape = {
     launched: false,
+    hit: false,
+    released: false,
     pos: { x: 0, y: 0 },
     vel: { x: 0, y: 0},
     theta: 0,
@@ -140,6 +142,8 @@ let templateLevel = {
         platform(platformTypes.large2, 800, 425),
         platform(platformTypes.large1, 800, 360),
         platform(platformTypes.large1, 850, 305),
+
+        platform(platformTypes.large1, 400, 100),
     ],
     tentacleTraps: [
         [430, 380],
@@ -255,6 +259,7 @@ keyHandler.onInputDown('throwTape', () => {
     if (!tape.launched && inGameplay) {
 
         tape.launched = true
+        tape.released = false
         tapeRip.pos(tape.pos.x * HOWLER_POS_SCALE, tape.pos.y * HOWLER_POS_SCALE)
         tapeRip.play()
 
@@ -321,7 +326,7 @@ function update(dt) {
         renderBG()
 
 
-        renderObjects() //render animations etc
+        renderObjects(dt) //render animations etc
         renderWorld()
 
         updatePlayer(dt)
@@ -362,7 +367,7 @@ function update(dt) {
 
 
 }
-function drawTape() {
+function drawTape(dt) {
     //calculate tape position
     if (!tape.launched) {
         const RADIUS = 60
@@ -387,25 +392,45 @@ function drawTape() {
             tape.pos = { x: RADIUS + player.pos.x + 30, y: player.pos.y + 30 }
         }
 
-        const THROW_VEL = 20
+        const THROW_VEL = 600
 
         tape.vel = Vec.scale(unitThrowDelta, THROW_VEL)
 
     } else {
-        tape.particles[tape.particles.length - 1].end = Vec.copy(tape.pos)
+        const curParticle = tape.particles[tape.particles.length - 1];
 
-        tape.pos = Vec.add(tape.pos, tape.vel)
-
-        if (tape.pos.y >= 450 || tape.pos.y < -20 || tape.pos.x < -20 || tape.pos.y > 800) {
-            tape.launched = false
+        if (!tape.released) {
+            if (!keyHandler.keyStates.has('throwTape')) tape.released = true;
+            curParticle.start = Vec.copy(player.pos)
         }
+        
+        if (!tape.hit) {
+            curParticle.end = Vec.copy(tape.pos)
 
-        const colliding = platforms.some(platform => rectCircleOverlaps(platform.pos, platform.size,
-            tape.pos, tape.radius));
+            tape.pos = Vec.add(tape.pos, Vec.scale(tape.vel, dt))
 
-        if (colliding) {
+            if (tape.pos.y >= 450 || tape.pos.y < -20 || tape.pos.x < -20 || tape.pos.y > 800) {
+                tape.launched = false
+            }
 
-            tape.launched = false;
+            const colliding = platforms.some(platform => rectCircleOverlaps(platform.pos, platform.size,
+                tape.pos, tape.radius));
+
+            if (colliding) {
+
+                tape.hit = true;
+            }
+        } else { // hit! start grapple
+            if (tape.released) { // stop grappling
+                tape.launched = false;
+                tape.hit = false
+            } else {
+                const GRAPPLE_FORCE = 1200
+                player.vel = Vec.add(player.vel, Vec.scale(
+                    Vec.unit(Vec.sub(curParticle.end, curParticle.start)), 
+                    GRAPPLE_FORCE * dt
+                ))
+            }
         }
     }
     //tape collision
@@ -566,19 +591,14 @@ function renderBG() {
 
             let drawX = (10 * unitX + t[0]) + 50
             let drawY = (10 * unitY + t[1]) + 50
-
-            for (let j = 0; j < tape.particles.length; j++) {
-
-                if (tape.particles[j] === undefined || tape.particles[j].end === null) {
-                    continue
-                } 
-
-                let p = tape.particles[j]
-
-                if (lineCircleIntersect([[p.start.x, p.start.y], [p.end.x, p.end.y]], [t[0] + 50, t[1] + 50, 30])) {
-                    t[3] = false
-                }
-            }
+            
+            t[3] = !tape.particles.some(
+                particle => particle !== undefined && particle.end !== null &&
+                lineCircleIntersect(
+                    [[particle.start.x, particle.start.y], [particle.end.x, particle.end.y]], 
+                    [t[0] + 50, t[1] + 50, 30]
+                )
+            )
 
             canvas.fillStyle = "red"
             if (t[3]) {
@@ -661,9 +681,9 @@ function sizeCvs() {
         gameScreenCvs.style.width = gameConsts.width + "px"
     }
 }
-function renderObjects() {
+function renderObjects(dt) {
 
-    drawTape()
+    drawTape(dt)
 
     // drawImage(100, 100, 100, 100, "Tentacles-" + (animationTicks % 7))
     // drawImage(200, 100, 100, 100, "Tentacles-" + (animationTicks % 7))
