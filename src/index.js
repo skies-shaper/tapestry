@@ -9,9 +9,10 @@ keyHandler.setKeyBindings({
     "moveLeft": ["KeyA", "ArrowLeft"],
     "moveRight": ["KeyD", "ArrowRight"],
     'jump': ['Space', 'ArrowUp', 'KeyW'],
-    'throwTape': [ 'MouseLeft' ],
-    'reset': [ 'KeyR' ]
+    'throwTape': ['MouseLeft'],
+    'reset': ["KeyR"]
 })
+let WON = false
 
 let inGameplay = false
 const gameScreenCvs = document.getElementById("gamescreen")
@@ -27,6 +28,18 @@ let gameConsts = {
 let mouseX = 400
 let mouseY = 400
 const HOWLER_POS_SCALE = 0.01
+
+const lowBubble = new Howl({
+    src: ['/public/bubbleloop.m4a'],
+    volume: 0.05,
+    rate: .7
+})
+
+const descendingGate = new Howl({
+    src: ['/public/bubbleloop.m4a'],
+    volume: 0.6,
+    rate: 3.5
+})
 
 const footstepSFX = new Howl({
     src: ['/public/footstep.wav'],
@@ -73,7 +86,7 @@ let tape = {
     hit: false,
     released: false,
     pos: { x: 0, y: 0 },
-    vel: { x: 0, y: 0},
+    vel: { x: 0, y: 0 },
     theta: 0,
     radius: 20,
     particles: []
@@ -103,6 +116,8 @@ let platformTypes = {
     large2: 1,
     thin: 2
 }
+// // setFont("20px Lacquer")
+// console.log(canvas.measureText("Cover up all of the ").width / gameConsts.scale)
 
 function platform(src, px, py) {
     if (src == platformTypes.large2)
@@ -144,7 +159,6 @@ let templateLevel = {
         platform(platformTypes.large1, 800, 360),
         platform(platformTypes.large1, 850, 305),
 
-        platform(platformTypes.large1, 400, 100),
     ],
     tentacleTraps: [
         { pos: { x: 430, y: 380 }, size: { x: 70, y: 70 }, axis: 'y', dir: -1 },
@@ -157,7 +171,15 @@ let templateLevel = {
     blockerY: 280, // bottom
     blockerSize: { x: 25, y: 150 },
     initialBlockerY: 280, // bottom
-    blocked: false
+    blocked: false,
+    text: [
+        [250, 100, "Welcome to Tapestry!", "#897e61", 30],
+        [250, 130, "Move your mouse to aim your tape!", "#897e61", 20],
+        [250, 150, "Click to throw it", "#897e61", 20],
+        [250, 170, "Cover up all of the ", "#897e61", 20],
+        [450, 170, "Forest Beast's Eyes", "#d005bf", 20],
+        [250, 190, "in order to be freed from each level", "#897e61", 20],
+    ]
 }
 let templateLevel2 = {
     eyePositions: [[300, 200, 0, true], [600, 100, 3, true]],
@@ -169,10 +191,26 @@ let templateLevel2 = {
         platform(platformTypes.large2, 800, 425),
         platform(platformTypes.large1, 800, 360),
         platform(platformTypes.large1, 850, 305),
+        platform(platformTypes.thin, 75, 0),
+        platform(platformTypes.thin, 225, 0),
+        platform(platformTypes.thin, 375, 0),
+        platform(platformTypes.thin, 500, 0),
+        platform(platformTypes.thin, 650, 0),
+        platform(platformTypes.thin, 800, 0),
+
+        platform(platformTypes.large1, 850, 150),
+        platform(platformTypes.large2, 850, 90),
+        platform(platformTypes.large1, 850, 30)
+
     ],
     tentacleTraps: [
         { pos: { x: 430, y: 380 }, size: { x: 70, y: 70 }, axis: 'y', dir: -1 },
         { pos: { x: 500, y: 380 }, size: { x: 70, y: 70 }, axis: 'y', dir: -1 },
+    ],
+    text: [
+        [250, 100, "Hold-click to swing with your tape!", "#897e61", 20],
+        [250, 120, "[R] to reset", "#897e61", 20],
+
     ],
     backgroundSRC: "",
     features: [],
@@ -195,13 +233,14 @@ let level = {
     ID: 0,
     backgroundOffset: 0,
     numMaskedEyes: 0,
-    data: {}
+    data: {},
+    blocked: true
 };
 
 const COYOTE_TIME = 0.1
 const JUMP_BUFFER = 0.1
 
-const JUMP_VEL = 700
+const JUMP_VEL = 900
 
 const AIR_FRICTION = 0.98
 const GROUND_FRICTION = 0.999999
@@ -230,7 +269,8 @@ let player = {
         idle: 0,
         moving: 1,
         slide: 2,
-        jump: 3
+        jump: 3,
+        swing: 4
     },
     animation: [
         "Jelli-1",
@@ -305,17 +345,29 @@ function countTPS() {
 }
 
 function update(dt) {
+
     if (Howler.ctx && Howler.ctx.state === 'running') { // configure sound listener
         Howler.orientation(0, 0, 1, 0, -1, 0); // flip y to make +y down
 
-        const listenerPos = [ 
-            gameConsts.width / gameConsts.scale / 2 * HOWLER_POS_SCALE, 
-            gameConsts.height / gameConsts.scale / 2 * HOWLER_POS_SCALE, 
+        const listenerPos = [
+            gameConsts.width / gameConsts.scale / 2 * HOWLER_POS_SCALE,
+            gameConsts.height / gameConsts.scale / 2 * HOWLER_POS_SCALE,
             -5
         ]
 
         Howler.pos(...listenerPos)
         //console.log("LISTENER", ...listenerPos)
+    }
+    if (WON) {
+        drawImage(0 - 350 * (Math.sin(totalTicks / 700) + 1), 0, 1600, 450, "BG")
+        drawImage(0, 0, 800, 400, "title")
+        setFont("30px Lacquer")
+        canvas.fillStyle = "#b8ab88"
+        drawText("Congratulations!", 280, 250)
+        drawText("You have evaded the ", 150, 300)
+        canvas.fillStyle = "#d005bf"
+        drawText("Forest Beast", 462, 300)
+        return
     }
     if (inGameplay) {
         if (totalTicks % 3 == 0) {
@@ -358,7 +410,7 @@ function update(dt) {
         resetLevel()
     })
 
-    setFont("30px Fredoka")
+    setFont("30px Lacquer")
     canvas.fillStyle = "#b8ab88"
 
     let text = "A normal game about a racoon"
@@ -408,7 +460,7 @@ function drawTape(dt) {
             if (!keyHandler.keyStates.has('throwTape')) tape.released = true;
             curParticle.start = Vec.copy(player.pos)
         }
-        
+
         if (!tape.hit) {
             curParticle.end = Vec.copy(tape.pos)
 
@@ -430,9 +482,10 @@ function drawTape(dt) {
                 tape.launched = false;
                 tape.hit = false
             } else {
-                const GRAPPLE_FORCE = 1200
+                player.moveState = player.moveStates.swing
+                const GRAPPLE_FORCE = 2000
                 player.vel = Vec.add(player.vel, Vec.scale(
-                    Vec.unit(Vec.sub(curParticle.end, curParticle.start)), 
+                    Vec.unit(Vec.sub(curParticle.end, curParticle.start)),
                     GRAPPLE_FORCE * dt
                 ))
             }
@@ -462,6 +515,9 @@ keyHandler.onInputDown('reset', () => {
 
 
 function updatePlayer(dt) {
+    // console.log(player.pos.x + "," + player.pos.y)
+    // console.log(level.blocked)
+
     player.moveState = player.moveStates.idle
 
     // check if grounded (check collision rect below player)
@@ -556,14 +612,18 @@ function updatePlayer(dt) {
 
     if (player.pos.y > 450) {
         resetLevel()
+
         return
     }
     if (player.pos.x < 0) {
         player.pos.x = 0
     }
-    if (player.pos.x > 780) {
+
+    if (player.pos.x > 760) {
+        console.log("over")
+
         if (level.blocked) {
-            player.pos.x = 780
+            player.pos.x = 760
         }
         else {
             nextLevel()
@@ -599,13 +659,13 @@ function renderBG() {
 
             let drawX = (10 * unitX + t[0]) + 50
             let drawY = (10 * unitY + t[1]) + 50
-            
+
             t[3] = !tape.particles.some(
                 particle => particle !== undefined && particle.end !== null &&
-                lineCircleIntersect(
-                    [[particle.start.x, particle.start.y], [particle.end.x, particle.end.y]], 
-                    [t[0] + 50, t[1] + 50, 30]
-                )
+                    lineCircleIntersect(
+                        [[particle.start.x, particle.start.y], [particle.end.x, particle.end.y]],
+                        [t[0] + 50, t[1] + 50, 30]
+                    )
             )
 
             canvas.fillStyle = "red"
@@ -621,6 +681,7 @@ function renderBG() {
     else {
         console.log(level)
     }
+
 }
 
 
@@ -638,10 +699,12 @@ function renderWorld() {
             const colliderSize = Vec.copy(t[i].size)
             colliderSize[t[i].axis] /= 4;
 
-            if (rectRectOverlaps(player.pos, player.size, colliderPos, colliderSize)) {
+            if (rectRectOverlaps(player.pos, { x: player.size.x*0.4, y: player.size.y }, colliderPos, colliderSize)) {
                 // died
                 resetLevel()
             }
+
+            if (!lowBubble.playing()) { lowBubble.play() }
         }
     }
 
@@ -661,14 +724,21 @@ function renderWorld() {
     }
     if (level.numMaskedEyes == 0) {
         level.data.blockerY += 0.03 * level.data.blockerSize.y
+        if (!descendingGate.playing()) { descendingGate.play() }
+    } else {
+        level.data.blockerY = level.data.initialBlockerY
+        descendingGate.stop()
     }
     if (level.data.blockerY - level.data.initialBlockerY > level.data.blockerSize.y) {
         level.blocked = false
+        descendingGate.stop()
     }
 }
 
+
 function resetLevel() {
     console.log("Reset level", level.ID)
+
     console.log(level)
 
     level.data = levelStorage[level.ID]
@@ -686,6 +756,12 @@ function nextLevel() {
     console.log(":DD")
     level.ID++
     level.backgroundOffset = Math.floor(Math.random() * 800)
+
+    if (level.ID >= levelStorage.length) {
+        WON = true
+        return
+    }
+
     resetLevel()
 }
 
@@ -717,7 +793,15 @@ function sizeCvs() {
 function renderObjects(dt) {
 
     drawTape(dt)
+    if (level.data.text != undefined) {
+        for (let i = 0; i < level.data.text.length; i++) {
+            let t = level.data.text[i]
+            canvas.fillStyle = t[3]
+            setFont(t[4] + "px Lacquer")
+            drawText(t[2], t[0], t[1])
 
+        }
+    }
     // drawImage(100, 100, 100, 100, "Tentacles-" + (animationTicks % 7))
     // drawImage(200, 100, 100, 100, "Tentacles-" + (animationTicks % 7))
     let frame
@@ -730,10 +814,12 @@ function renderObjects(dt) {
             break;
         case player.moveStates.slide:
             frame = "Jelli-1"
-
+            break;
+        case player.moveStates.swing:
+            frame = "Jelli-swing"
             break;
         default:
-            frame = "Jelli-1"
+            frame = "Jelli-idle"
     }
     // canvas.fillStyle = "blue"
     // fillRect(player.pos.x - player.size.x / 2, player.pos.y - player.size.y / 2, player.size.x, player.size.y)
@@ -789,7 +875,7 @@ function fillRect(x, y, w, h) {
 }
 
 function setFont(font) {
-    canvas.font = font.substring(0, font.indexOf("p")) * gameConsts.scale + "px Fredoka"
+    canvas.font = font.substring(0, font.indexOf("p")) * gameConsts.scale + "px Lacquer"
 }
 
 function drawText(str, x, y, maxWidth) {
