@@ -31,9 +31,16 @@ const HOWLER_POS_SCALE = 0.01
 
 const lowBubble = new Howl({
     src: ['/public/bubbleloop.m4a'],
-    volume: 0.05,
+    volume: .3,
+    rate: .5
+})
+
+const tapeHit = new Howl({
+    src: ['/public/tape-hit.wav'],
+    volume: 3,
     rate: .7
 })
+
 
 const descendingGate = new Howl({
     src: ['/public/bubbleloop.m4a'],
@@ -147,6 +154,51 @@ function platform(src, px, py) {
         }
     }
 }
+let level3 = {
+    eyePositions: [[300, 200, 0, true], [600, 100, 3, true]],
+    platforms: [
+        platform(platformTypes.large1, 75, 425),
+
+
+
+        platform(platformTypes.thin, 75, 0),
+        platform(platformTypes.thin, 225, 0),
+        platform(platformTypes.thin, 375, 0),
+        platform(platformTypes.thin, 500, 0),
+        platform(platformTypes.thin, 650, 0),
+        platform(platformTypes.thin, 800, 0),
+        platform(platformTypes.large1, 650, 425),
+        platform(platformTypes.large2, 650, 375),
+        platform(platformTypes.large2, 800, 425),
+        platform(platformTypes.large1, 800, 375),
+        platform(platformTypes.large1, 800, 310),
+
+        platform(platformTypes.large1, 850, 150),
+        platform(platformTypes.large2, 850, 90),
+        platform(platformTypes.large1, 850, 30)
+
+    ],
+    tentacleTraps: [
+        { pos: { x: 430, y: 380 }, size: { x: 70, y: 70 }, axis: 'y', dir: -1 },
+        { pos: { x: 500, y: 380 }, size: { x: 70, y: 70 }, axis: 'y', dir: -1 },
+        { pos: { x: 360, y: 380 }, size: { x: 70, y: 70 }, axis: 'y', dir: -1 },
+        { pos: { x: 290, y: 380 }, size: { x: 70, y: 70 }, axis: 'y', dir: -1 },
+        { pos: { x: 220, y: 380 }, size: { x: 70, y: 70 }, axis: 'y', dir: -1 },
+        { pos: { x: 150, y: 380 }, size: { x: 70, y: 70 }, axis: 'y', dir: -1 },
+
+    ],
+    text: [
+
+    ],
+    backgroundSRC: "",
+    features: [],
+    respawnPosition: [50, 250],
+    blockerY: 280, // bottom
+    blockerSize: { x: 25, y: 75 },
+    initialBlockerY: 280,
+    blocked: false,
+    maxTapes: 2
+}
 
 let templateLevel = {
     eyePositions: [[200, 200, 0, true], [150, 100, 3, true]],
@@ -227,7 +279,7 @@ let platforms = [
 ]
 
 let levelStorage = [
-    templateLevel, templateLevel2
+    templateLevel, templateLevel2, level3
 ]
 
 let level = {
@@ -307,6 +359,7 @@ keyHandler.onInputDown('throwTape', () => {
         }
         player.numTapes--
         tape.launched = true
+
         tape.released = false
         tapeRip.pos(tape.pos.x * HOWLER_POS_SCALE, tape.pos.y * HOWLER_POS_SCALE)
         tapeRip.play()
@@ -499,7 +552,8 @@ function drawTape(dt) {
                 tape.pos, tape.radius));
 
             if (colliding) {
-
+                console.log("collided!")
+                // tapeHit.play()
                 tape.hit = true;
             }
         } else { // hit! start grapple
@@ -735,9 +789,9 @@ function renderWorld() {
 
             if (t[i].soundID === undefined) t[i].soundID = lowBubble.play();
             lowBubble.pos(
-                (t[i].pos.x + t[i].size.x/2) * HOWLER_POS_SCALE, 
-                (t[i].pos.y + t[i].size.y/2) * HOWLER_POS_SCALE, 
-                0, 
+                (t[i].pos.x + t[i].size.x / 2) * HOWLER_POS_SCALE,
+                (t[i].pos.y + t[i].size.y / 2) * HOWLER_POS_SCALE,
+                0,
                 t[i].soundID
             )
             if (!lowBubble.playing(t[i].soundID)) { lowBubble.play(t[i].soundID) }
@@ -760,7 +814,7 @@ function renderWorld() {
     }
     if (level.numMaskedEyes == 0) {
         level.data.blockerY += 0.03 * level.data.blockerSize.y
-        if (!descendingGate.playing()) { descendingGate.play() }
+        if (!descendingGate.playing()) { descendingGate.seek(2.5); descendingGate.play() }
     } else {
         level.data.blockerY = level.data.initialBlockerY
         descendingGate.stop()
