@@ -146,7 +146,6 @@ let templateLevel = {
         platform(platformTypes.large1, 800, 360),
         platform(platformTypes.large1, 850, 305),
 
-        platform(platformTypes.large1, 400, 100),
     ],
     tentacleTraps: [
         [430, 380],
