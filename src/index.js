@@ -188,7 +188,7 @@ let templateLevel2 = {
     platforms: [
         platform(platformTypes.large1, 75, 425),
         platform(platformTypes.large2, 225, 425),
-        platform(platformTypes.large1, 375, 425),
+        //platform(platformTypes.large1, 375, 425),
         platform(platformTypes.large1, 650, 425),
         platform(platformTypes.large2, 800, 425),
         platform(platformTypes.large1, 800, 360),
@@ -206,6 +206,8 @@ let templateLevel2 = {
 
     ],
     tentacleTraps: [
+        { pos: { x: 290, y: 380 }, size: { x: 70, y: 70 }, axis: 'y', dir: -1 },
+        { pos: { x: 360, y: 380 }, size: { x: 70, y: 70 }, axis: 'y', dir: -1 },
         { pos: { x: 430, y: 380 }, size: { x: 70, y: 70 }, axis: 'y', dir: -1 },
         { pos: { x: 500, y: 380 }, size: { x: 70, y: 70 }, axis: 'y', dir: -1 },
     ],
@@ -224,12 +226,135 @@ let templateLevel2 = {
     maxTapes: 6
 }
 
+let level3 = {
+    eyePositions: [[20, 50, 3, true], [650, 50, 4, true]],
+    platforms: [
+        platform(platformTypes.large1, 75, 425),
+        platform(platformTypes.large2, 100, 425),
+        
+        platform(platformTypes.large1, 750, 425),
+        platform(platformTypes.large2, 800, 425),
+
+        platform(platformTypes.large1, 280, 150),
+
+        platform(platformTypes.large1, 550, 150),
+    ],
+    tentacleTraps: [
+        { pos: { x: 150, y: 380 }, size: { x: 70, y: 70 }, axis: 'y', dir: -1 },
+        { pos: { x: 220, y: 380 }, size: { x: 70, y: 70 }, axis: 'y', dir: -1 },
+        { pos: { x: 290, y: 380 }, size: { x: 70, y: 70 }, axis: 'y', dir: -1 },
+        { pos: { x: 360, y: 380 }, size: { x: 70, y: 70 }, axis: 'y', dir: -1 },
+        { pos: { x: 430, y: 380 }, size: { x: 70, y: 70 }, axis: 'y', dir: -1 },
+        { pos: { x: 500, y: 380 }, size: { x: 70, y: 70 }, axis: 'y', dir: -1 },
+        { pos: { x: 570, y: 380 }, size: { x: 70, y: 70 }, axis: 'y', dir: -1 },
+        { pos: { x: 640, y: 380 }, size: { x: 70, y: 70 }, axis: 'y', dir: -1 },
+    ],
+    text: [
+
+    ],
+    backgroundSRC: "",
+    features: [],
+    respawnPosition: [50, 250],
+    blockerY: 400, // bottom
+    blockerSize: { x: 25, y: 300 },
+    initialBlockerY: 400,
+    blocked: false,
+    maxTapes: 4
+}
+
+let level4 = {
+    eyePositions: [[200, 180, 1, true], [350, 230, 4, true], [500, 180, 2, true]],
+    platforms: [
+        platform(platformTypes.large1, 0, 425),
+        platform(platformTypes.large2, 50, 425),
+
+        platform(platformTypes.large2, 400, 425),
+        
+        platform(platformTypes.large1, 750, 425),
+        platform(platformTypes.large2, 850, 425),
+
+        platform(platformTypes.large1, 230, 150),
+
+        platform(platformTypes.large1, 550, 150),
+    ],
+    tentacleTraps: [
+        { pos: { x: 80, y: 380 }, size: { x: 70, y: 70 }, axis: 'y', dir: -1 },
+        { pos: { x: 150, y: 380 }, size: { x: 70, y: 70 }, axis: 'y', dir: -1 },
+        { pos: { x: 220, y: 380 }, size: { x: 70, y: 70 }, axis: 'y', dir: -1 },
+        { pos: { x: 290, y: 380 }, size: { x: 70, y: 70 }, axis: 'y', dir: -1 },
+        { pos: { x: 360, y: 380 }, size: { x: 70, y: 70 }, axis: 'y', dir: -1 },
+        { pos: { x: 430, y: 380 }, size: { x: 70, y: 70 }, axis: 'y', dir: -1 },
+        { pos: { x: 500, y: 380 }, size: { x: 70, y: 70 }, axis: 'y', dir: -1 },
+        { pos: { x: 570, y: 380 }, size: { x: 70, y: 70 }, axis: 'y', dir: -1 },
+        { pos: { x: 640, y: 380 }, size: { x: 70, y: 70 }, axis: 'y', dir: -1 },
+    ],
+    text: [
+
+    ],
+    backgroundSRC: "",
+    features: [],
+    respawnPosition: [50, 250],
+    blockerY: 400, // bottom
+    blockerSize: { x: 25, y: 300 },
+    initialBlockerY: 400,
+    blocked: false,
+    maxTapes: 2
+}
+
+let level5 = {
+    eyePositions: [[230, 20, 3, true]],
+    platforms: [
+        platform(platformTypes.large1, 75, 425),
+        platform(platformTypes.large2, 225, 425),
+        platform(platformTypes.large1, 375, 425),
+        platform(platformTypes.large2, 480, 425),
+        platform(platformTypes.large1, 650, 425),
+        platform(platformTypes.large2, 800, 425),
+
+
+        platform(platformTypes.large1, 75, 200),
+        platform(platformTypes.large2, 225, 200),
+        platform(platformTypes.large1, 280, 200),
+        //platform(platformTypes.large2, 480, 200),
+        platform(platformTypes.thin, 550, 200),
+        platform(platformTypes.large2, 800, 200),
+
+        platform(platformTypes.large1, 75, 0),
+        platform(platformTypes.large2, 225, 0),
+        platform(platformTypes.large1, 375, 0),
+        platform(platformTypes.large2, 480, 0),
+        platform(platformTypes.large1, 650, 0),
+        platform(platformTypes.large2, 800, 0),
+
+        platform(platformTypes.large2, 0, 135),
+        platform(platformTypes.large1, 0, 70),
+
+        platform(platformTypes.large1, 800, 260),
+        platform(platformTypes.large2, 800, 320),
+        platform(platformTypes.large1, 800, 380),
+    ],
+    tentacleTraps: [
+
+    ],
+    text: [
+
+    ],
+    backgroundSRC: "",
+    features: [],
+    respawnPosition: [50, 300],
+    blockerY: 180, // bottom
+    blockerSize: { x: 25, y: 120 },
+    initialBlockerY: 180,
+    blocked: false,
+    maxTapes: 1
+}
+
 let platforms = [
     templatePlatform
 ]
 
 let levelStorage = [
-    templateLevel, templateLevel2
+    templateLevel, templateLevel2, level3, level4, level5
 ]
 
 let level = {
