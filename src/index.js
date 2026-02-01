@@ -22,7 +22,8 @@ let gameConsts = {
     height: 450,
     scale: 1
 }
-let mouseX, mouseY;
+let mouseX = 400
+let mouseY = 400
 const HOWLER_POS_SCALE = 0.02
 
 const footstepSFX = new Howl({
