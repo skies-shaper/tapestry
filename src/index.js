@@ -23,6 +23,44 @@ let gameConsts = {
     scale: 1
 }
 let mouseX, mouseY;
+const HOWLER_POS_SCALE = 0.02
+
+const footstepSFX = new Howl({
+    src: ['/public/footstep.wav'],
+    volume: 0.5,
+})
+
+const landSFX = new Howl({
+    src: ['/public/land.wav'],
+    volume: 1.5,
+})
+
+const musicLoop = new Howl({
+    src: ['/public/ost-loop.mp3'],
+    volume: 0.4,
+    loop: true,
+    html: true
+})
+
+const howlBg = new Howl({
+    src: ['/public/howl-bg.mp3'],
+    volume: 0.1,
+    loop: true,
+    html: true
+})
+
+const musicStart = new Howl({
+    src: ['/public/ost-start.mp3'],
+    volume: 0.4,
+    html: true,
+    onend: () => {
+        musicLoop.play();
+        howlBg.play();
+    }
+})
+
+musicStart.play()
+
 let tape = {
     launched: false,
     x: 0,
@@ -156,7 +194,9 @@ const AIR_FRICTION = 0.8
 const GROUND_FRICTION = 0.95
 
 const GRAVITY_ACCEL = 900
-const MOVE_ACCEL = 200
+const GRAVITY_DOWNWARDS_ACCEL = 600
+const GROUND_MOVE_ACCEL = 200
+const AIR_MOVE_ACCEL = 300
 
 let player = {
     direction: 1,
@@ -197,7 +237,8 @@ let player = {
         "Jelli-idle"
 
 
-    ]
+    ],
+    grounded: false
 }
 window.addEventListener("mousedown", (e) => {
     if (!tape.launched && inGameplay) {
@@ -258,6 +299,10 @@ function countTPS() {
 }
 
 function update(dt) {
+    if (Howler.ctx && Howler.ctx.state === 'running') { // configure sound listener
+        Howler.orientation(0, 0, 1, 0, -1, 0); // flip y to make +y down
+        Howler.pos(gameConsts.width / 2 * HOWLER_POS_SCALE, gameConsts.height / 2 * HOWLER_POS_SCALE, -5)
+    }
     if (inGameplay) {
         if (totalTicks % 3 == 0) {
             animationTicks++
@@ -265,6 +310,8 @@ function update(dt) {
         canvas.fillStyle = "#ffffff"
         fillRect(0, 0, 800, 450)
         renderBG()
+        applyVignette()
+
 
         renderObjects() //render animations etc
         renderWorld()
@@ -383,6 +430,8 @@ function updatePlayer(dt) {
     )
 
     if (grounded) player.jumpTime = COYOTE_TIME;
+    const prevGrounded = player.grounded;
+    player.grounded = grounded;
 
     // apply impulses/update velocity
 
@@ -404,9 +453,19 @@ function updatePlayer(dt) {
         player.direction = 1
 
     }
+    player.vel.x += moveX * (grounded ? GROUND_MOVE_ACCEL : AIR_MOVE_ACCEL) * dt;
 
-    player.vel.x += moveX * MOVE_ACCEL * dt;
+    if (grounded && moveX != 0) { // play walk sfx
+        footstepSFX.pos(groundedHitboxPos.x * HOWLER_POS_SCALE, groundedHitboxPos.y * HOWLER_POS_SCALE, 0)
+        if (!footstepSFX.playing()) footstepSFX.play()
+    } else {
+        //footstepSFX.stop()
+    }
+    if (grounded && !prevGrounded && player.vel.y >= 0) { // just landed
+        landSFX.pos(groundedHitboxPos.x * HOWLER_POS_SCALE, groundedHitboxPos.y * HOWLER_POS_SCALE, 0)
 
+        landSFX.play()
+    }
     // jumping
     if (player.jumpTime > 0) {
         player.jumpTime -= dt;
@@ -420,7 +479,7 @@ function updatePlayer(dt) {
     // gravity
     if (!grounded) {
         player.moveState = player.moveStates.jump
-
+        if (player.vel.y > 0) player.vel.y += GRAVITY_DOWNWARDS_ACCEL * dt
         player.vel.y += GRAVITY_ACCEL * dt
     }
 
@@ -450,7 +509,9 @@ function updatePlayer(dt) {
         player.pos.y = level.data.respawnPosition[1]
         return
     }
-
+    if (player.pos.x < 0) {
+        player.pos.x = 0
+    }
     if (player.pos.x > 780) {
         if (level.blocked) {
             player.pos.x == 780
@@ -737,4 +798,23 @@ function lineCircleIntersect(line, circle) {
         return false;
     }
 }
+function applyVignette() {
+    // radial gradient centered at canvas center
+    var gradient = canvas.createRadialGradient(
+        400 * gameConsts.scale, 400 * gameConsts.scale, 0,  // Inner circle (center, radius 0)
+        400 * gameConsts.scale, 400 * gameConsts.scale, Math.max(800 * gameConsts.scale, 400 * gameConsts.scale) / 2
+        // Outer circle (center, radius half of max dimension)
+    );
+
+    // color stops for the gradient
+    gradient.addColorStop(0, 'rgba(0, 0, 0, 0)'); // center: fully transparent
+
+    gradient.addColorStop(0.6, 'rgba(0, 0, 0, 0)'); // inner area: fully transparent
+    gradient.addColorStop(1, 'rgba(0, 0, 0, 0.7)'); // edges: semi-transparent dark color
+
+    // 4. Apply the gradient
+    canvas.fillStyle = gradient;
+    fillRect(0, 0, 800, 400);
+}
+
 export { fillRect, setFont, drawText, drawImage };
