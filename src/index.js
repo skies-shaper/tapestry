@@ -29,8 +29,10 @@ let mouseX = 400
 let mouseY = 400
 const HOWLER_POS_SCALE = 0.01
 
+const publicPath = filename => window.location.pathname + "public/" + filename;
+
 const lowBubble = new Howl({
-    src: ['/public/bubbleloop.m4a'],
+    src: [publicPath('bubbleloop.m4a')],
     volume: .3,
     rate: .5
 })
@@ -43,41 +45,41 @@ const tapeHit = new Howl({
 
 
 const descendingGate = new Howl({
-    src: ['/public/bubbleloop.m4a'],
+    src: [publicPath('bubbleloop.m4a')],
     volume: 0.6,
     rate: 3.5
 })
 
 const footstepSFX = new Howl({
-    src: ['/public/footstep.wav'],
+    src: [publicPath('footstep.wav')],
     volume: 0.7,
 })
 const tapeRip = new Howl({
-    src: ['/public/tape-rip.m4a'],
+    src: [publicPath('tape-rip.m4a')],
     volume: 0.2,
 })
 
 const landSFX = new Howl({
-    src: ['/public/land.wav'],
+    src: [publicPath('land.wav')],
     volume: 2,
 })
 
 const musicLoop = new Howl({
-    src: ['/public/ost-loop.mp3'],
+    src: [publicPath('ost-loop.mp3')],
     volume: 0.4,
     loop: true,
     html: true
 })
 
 const howlBg = new Howl({
-    src: ['/public/howl-bg.mp3'],
+    src: [publicPath('howl-bg.mp3')],
     volume: 0.15,
     loop: true,
     html: true
 })
 
 const musicStart = new Howl({
-    src: ['/public/ost-start.mp3'],
+    src: [publicPath('ost-start.mp3')],
     volume: 0.4,
     html: true,
     onend: () => {
@@ -814,7 +816,12 @@ function renderWorld() {
     }
     if (level.numMaskedEyes == 0) {
         level.data.blockerY += 0.03 * level.data.blockerSize.y
-        if (!descendingGate.playing()) { descendingGate.seek(2.5); descendingGate.play() }
+        if (!descendingGate.playing()) {
+            descendingGate.seek(2.5);
+            descendingGate.pos(780 * HOWLER_POS_SCALE,
+                (level.data.blockerY - level.data.blockerSize.y / 2) * HOWLER_POS_SCALE, 0)
+            descendingGate.play()
+        }
     } else {
         level.data.blockerY = level.data.initialBlockerY
         descendingGate.stop()
