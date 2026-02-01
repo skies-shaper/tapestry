@@ -69,10 +69,8 @@ musicStart.play()
 
 let tape = {
     launched: false,
-    x: 0,
-    y: 0,
-    vX: 0,
-    vY: 0,
+    pos: { x: 0, y: 0 },
+    vel: { x: 0, y: 0},
     theta: 0,
     radius: 20,
     particles: []
@@ -257,22 +255,10 @@ keyHandler.onInputDown('throwTape', () => {
     if (!tape.launched && inGameplay) {
 
         tape.launched = true
-        tapeRip.pos(tape.x * HOWLER_POS_SCALE, tape.y * HOWLER_POS_SCALE)
+        tapeRip.pos(tape.pos.x * HOWLER_POS_SCALE, tape.pos.y * HOWLER_POS_SCALE)
         tapeRip.play()
-        // tape.theta = tape.theta * -1
-        // tape.vX = Math.cos(tape.theta) * 20
-        // if (tape.x + 20 < player.pos.x + 30) {
-        //     tape.vX = Math.cos(tape.theta) * -20
 
-        // }
-
-        // tape.vY = Math.sin(tape.theta) * -10
-        // if (tape.x + 20 < player.pos.x + 30) {
-        //     tape.vY = Math.sin(tape.theta) * 10
-        // }
-        tape.particles.push([[player.pos.x + 10, player.pos.y + 10], []])
-        // tape.x = player.pos.x + 40
-        // tape.y = player.pos.y + 50
+        tape.particles.push({ start: Vec.copy(player.pos), end: null })
     }
 })
 _gameLoop()
@@ -392,32 +378,30 @@ function drawTape() {
         canvas.ellipse((player.pos.x) * gameConsts.scale, (player.pos.y) * gameConsts.scale, RADIUS * gameConsts.scale, RADIUS * gameConsts.scale, 0, 0, (2 * Math.PI))
         canvas.stroke()
 
-        let xComp = (mouseX) - (player.pos.x)
-        let yComp = (mouseY) - (player.pos.y)
+        const throwDelta = Vec.sub({ x: mouseX, y: mouseY }, player.pos)
+        const unitThrowDelta = Vec.unit(throwDelta)
 
-        let unitX = xComp / Math.pow((xComp * xComp) + (yComp * yComp), .5)
-        let unitY = yComp / Math.pow((xComp * xComp) + (yComp * yComp), .5)
+        tape.pos = Vec.add(player.pos, Vec.scale(unitThrowDelta, RADIUS))
 
-        tape.x = (RADIUS * unitX + player.pos.x) - 20
-        tape.y = (RADIUS * unitY + player.pos.y) - 20
-        if (isNaN(tape.x)) {
-            tape.x = (RADIUS + player.pos.x + 30)
-            tape.y = player.pos.y + 30
+        if (isNaN(tape.pos.x)) {
+            tape.pos = { x: RADIUS + player.pos.x + 30, y: player.pos.y + 30 }
         }
-        tape.vX = unitX * 13
-        tape.vY = unitY * 13
+
+        const THROW_VEL = 20
+
+        tape.vel = Vec.scale(unitThrowDelta, THROW_VEL)
+
     } else {
-        tape.particles[tape.particles.length - 1][1][0] = tape.x + 20
-        tape.particles[tape.particles.length - 1][1][1] = tape.y + 20
-        tape.x += tape.vX
-        tape.y += tape.vY
-        // tape.vY += 0.5
-        if (tape.y >= 450 || tape.y < -20 || tape.x < -20 || tape.y > 800) {
+        tape.particles[tape.particles.length - 1].end = Vec.copy(tape.pos)
+
+        tape.pos = Vec.add(tape.pos, tape.vel)
+
+        if (tape.pos.y >= 450 || tape.pos.y < -20 || tape.pos.x < -20 || tape.pos.y > 800) {
             tape.launched = false
         }
 
         const colliding = platforms.some(platform => rectCircleOverlaps(platform.pos, platform.size,
-            { x: tape.x, y: tape.y }, tape.radius));
+            tape.pos, tape.radius));
 
         if (colliding) {
 
@@ -427,17 +411,19 @@ function drawTape() {
     //tape collision
     canvas.strokeStyle = "#b8ab88"
 
+    const TAPE_WIDTH = 20
+
     for (let i = 0; i < tape.particles.length; i++) {
         canvas.lineCap = "square"
         canvas.setLineDash([])
-        canvas.lineWidth = 20 * gameConsts.scale
+        canvas.lineWidth = TAPE_WIDTH * gameConsts.scale
         canvas.beginPath()
-        canvas.moveTo(tape.particles[i][0][0] * gameConsts.scale, tape.particles[i][0][1] * gameConsts.scale)
-        canvas.lineTo(tape.particles[i][1][0] * gameConsts.scale, tape.particles[i][1][1] * gameConsts.scale)
+        canvas.moveTo(tape.particles[i].start.x * gameConsts.scale, tape.particles[i].start.y * gameConsts.scale)
+        canvas.lineTo(tape.particles[i].end.x * gameConsts.scale, tape.particles[i].end.y * gameConsts.scale)
         canvas.stroke()
     }
-    drawImage(tape.x, tape.y, 40, 40, "tape")
 
+    drawImage(tape.pos.x - 20, tape.pos.y - 20, 40, 40, "tape")
 }
 
 
@@ -583,13 +569,13 @@ function renderBG() {
 
             for (let j = 0; j < tape.particles.length; j++) {
 
-                if (tape.particles[j] === undefined || tape.particles[j][1].length < 1) {
+                if (tape.particles[j] === undefined || tape.particles[j].end === null) {
                     continue
-                }
+                } 
 
                 let p = tape.particles[j]
 
-                if (lineCircleIntersect(p, [t[0] + 50, t[1] + 50, 30])) {
+                if (lineCircleIntersect([[p.start.x, p.start.y], [p.end.x, p.end.y]], [t[0] + 50, t[1] + 50, 30])) {
                     t[3] = false
                 }
             }
