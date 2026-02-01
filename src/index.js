@@ -9,6 +9,7 @@ keyHandler.setKeyBindings({
     "moveLeft": ["KeyA", "ArrowLeft"],
     "moveRight": ["KeyD", "ArrowRight"],
     'jump': ['Space', 'ArrowUp', 'KeyW'],
+    'throwTape': ['MouseLeft']
 })
 let WON = false
 
@@ -25,20 +26,20 @@ let gameConsts = {
 }
 let mouseX = 400
 let mouseY = 400
-const HOWLER_POS_SCALE = 0.02
+const HOWLER_POS_SCALE = 0.01
 
 const footstepSFX = new Howl({
     src: ['/public/footstep.wav'],
-    volume: 0.5,
+    volume: 0.7,
 })
 const tapeRip = new Howl({
     src: ['/public/tape-rip.m4a'],
-    volume: 10,
+    volume: 0.2,
 })
 
 const landSFX = new Howl({
     src: ['/public/land.wav'],
-    volume: 1.5,
+    volume: 2,
 })
 
 const musicLoop = new Howl({
@@ -50,7 +51,7 @@ const musicLoop = new Howl({
 
 const howlBg = new Howl({
     src: ['/public/howl-bg.mp3'],
-    volume: 0.1,
+    volume: 0.15,
     loop: true,
     html: true
 })
@@ -69,10 +70,10 @@ musicStart.play()
 
 let tape = {
     launched: false,
-    x: 0,
-    y: 0,
-    vX: 0,
-    vY: 0,
+    hit: false,
+    released: false,
+    pos: { x: 0, y: 0 },
+    vel: { x: 0, y: 0 },
     theta: 0,
     radius: 20,
     particles: []
@@ -144,6 +145,8 @@ let templateLevel = {
         platform(platformTypes.large2, 800, 425),
         platform(platformTypes.large1, 800, 360),
         platform(platformTypes.large1, 850, 305),
+
+        platform(platformTypes.large1, 400, 100),
     ],
     tentacleTraps: [
         [430, 380],
@@ -218,16 +221,17 @@ let level = {
     blocked: true
 };
 
-const COYOTE_TIME = 5
+const COYOTE_TIME = 0.1
+const JUMP_BUFFER = 0.1
 
-const JUMP_VEL = 500
+const JUMP_VEL = 700
 
-const AIR_FRICTION = 0.8
-const GROUND_FRICTION = 0.95
+const AIR_FRICTION = 0.98
+const GROUND_FRICTION = 0.999999
 
-const GRAVITY_ACCEL = 900
+const GRAVITY_ACCEL = 600
 const GRAVITY_DOWNWARDS_ACCEL = 600
-const GROUND_MOVE_ACCEL = 200
+const GROUND_MOVE_ACCEL = 1000
 const AIR_MOVE_ACCEL = 300
 
 let player = {
@@ -237,6 +241,7 @@ let player = {
     size: { x: 35, y: 55 },
 
     jumpTime: 0, // stores coyote time
+    jumpBuffer: 0, // buffer that allows jumping if space was pressed early
 
     frame: 0,
     maxFrames: 5,
@@ -272,26 +277,20 @@ let player = {
     ],
     grounded: false
 }
-window.addEventListener("mousedown", (e) => {
+
+keyHandler.onInputDown('jump', () => {
+    player.jumpBuffer = JUMP_BUFFER
+})
+
+keyHandler.onInputDown('throwTape', () => {
     if (!tape.launched && inGameplay) {
 
         tape.launched = true
-        tapeRip.pos(tape.x, tape.y)
+        tape.released = false
+        tapeRip.pos(tape.pos.x * HOWLER_POS_SCALE, tape.pos.y * HOWLER_POS_SCALE)
         tapeRip.play()
-        // tape.theta = tape.theta * -1
-        // tape.vX = Math.cos(tape.theta) * 20
-        // if (tape.x + 20 < player.pos.x + 30) {
-        //     tape.vX = Math.cos(tape.theta) * -20
 
-        // }
-
-        // tape.vY = Math.sin(tape.theta) * -10
-        // if (tape.x + 20 < player.pos.x + 30) {
-        //     tape.vY = Math.sin(tape.theta) * 10
-        // }
-        tape.particles.push([[player.pos.x + 10, player.pos.y + 10], []])
-        // tape.x = player.pos.x + 40
-        // tape.y = player.pos.y + 50
+        tape.particles.push({ start: Vec.copy(player.pos), end: null })
     }
 })
 _gameLoop()
@@ -336,7 +335,15 @@ function update(dt) {
 
     if (Howler.ctx && Howler.ctx.state === 'running') { // configure sound listener
         Howler.orientation(0, 0, 1, 0, -1, 0); // flip y to make +y down
-        Howler.pos(gameConsts.width / 2 * HOWLER_POS_SCALE, gameConsts.height / 2 * HOWLER_POS_SCALE, -5)
+
+        const listenerPos = [
+            gameConsts.width / gameConsts.scale / 2 * HOWLER_POS_SCALE,
+            gameConsts.height / gameConsts.scale / 2 * HOWLER_POS_SCALE,
+            -5
+        ]
+
+        Howler.pos(...listenerPos)
+        //console.log("LISTENER", ...listenerPos)
     }
     if (WON) {
         drawImage(0 - 350 * (Math.sin(totalTicks / 700) + 1), 0, 1600, 450, "BG")
@@ -358,7 +365,7 @@ function update(dt) {
         renderBG()
 
 
-        renderObjects() //render animations etc
+        renderObjects(dt) //render animations etc
         renderWorld()
 
         updatePlayer(dt)
@@ -399,9 +406,11 @@ function update(dt) {
 
 
 }
-function drawTape() {
+function drawTape(dt) {
     //calculate tape position
     if (!tape.launched) {
+        const RADIUS = 60
+
         let circ = 175 * gameConsts.scale * 2 * Math.PI
 
         canvas.lineWidth = 2 * gameConsts.scale
@@ -410,55 +419,75 @@ function drawTape() {
         canvas.strokeStyle = "#ababab"
 
         canvas.beginPath()
-        canvas.ellipse((player.pos.x) * gameConsts.scale, (player.pos.y) * gameConsts.scale, 100 * gameConsts.scale, 100 * gameConsts.scale, 0, 0, (2 * Math.PI))
+        canvas.ellipse((player.pos.x) * gameConsts.scale, (player.pos.y) * gameConsts.scale, RADIUS * gameConsts.scale, RADIUS * gameConsts.scale, 0, 0, (2 * Math.PI))
         canvas.stroke()
 
-        let xComp = (mouseX) - (player.pos.x)
-        let yComp = (mouseY) - (player.pos.y)
+        const throwDelta = Vec.sub({ x: mouseX, y: mouseY }, player.pos)
+        const unitThrowDelta = Vec.unit(throwDelta)
 
-        let unitX = xComp / Math.pow((xComp * xComp) + (yComp * yComp), .5)
-        let unitY = yComp / Math.pow((xComp * xComp) + (yComp * yComp), .5)
+        tape.pos = Vec.add(player.pos, Vec.scale(unitThrowDelta, RADIUS))
 
-        tape.x = (100 * unitX + player.pos.x) - 20
-        tape.y = (100 * unitY + player.pos.y) - 20
-        if (isNaN(tape.x)) {
-            tape.x = (100 + player.pos.x + 30)
-            tape.y = player.pos.y + 30
+        if (isNaN(tape.pos.x)) {
+            tape.pos = { x: RADIUS + player.pos.x + 30, y: player.pos.y + 30 }
         }
-        tape.vX = unitX * 13
-        tape.vY = unitY * 13
+
+        const THROW_VEL = 600
+
+        tape.vel = Vec.scale(unitThrowDelta, THROW_VEL)
+
     } else {
-        tape.particles[tape.particles.length - 1][1][0] = tape.x + 20
-        tape.particles[tape.particles.length - 1][1][1] = tape.y + 20
-        tape.x += tape.vX
-        tape.y += tape.vY
-        // tape.vY += 0.5
-        if (tape.y >= 450 || tape.y < -20 || tape.x < -20 || tape.y > 800) {
-            tape.launched = false
+        const curParticle = tape.particles[tape.particles.length - 1];
+
+        if (!tape.released) {
+            if (!keyHandler.keyStates.has('throwTape')) tape.released = true;
+            curParticle.start = Vec.copy(player.pos)
         }
 
-        const colliding = platforms.some(platform => rectCircleOverlaps(platform.pos, platform.size,
-            { x: tape.x, y: tape.y }, tape.radius));
+        if (!tape.hit) {
+            curParticle.end = Vec.copy(tape.pos)
 
-        if (colliding) {
+            tape.pos = Vec.add(tape.pos, Vec.scale(tape.vel, dt))
 
-            tape.launched = false;
+            if (tape.pos.y >= 450 || tape.pos.y < -20 || tape.pos.x < -20 || tape.pos.y > 800) {
+                tape.launched = false
+            }
+
+            const colliding = platforms.some(platform => rectCircleOverlaps(platform.pos, platform.size,
+                tape.pos, tape.radius));
+
+            if (colliding) {
+
+                tape.hit = true;
+            }
+        } else { // hit! start grapple
+            if (tape.released) { // stop grappling
+                tape.launched = false;
+                tape.hit = false
+            } else {
+                const GRAPPLE_FORCE = 1200
+                player.vel = Vec.add(player.vel, Vec.scale(
+                    Vec.unit(Vec.sub(curParticle.end, curParticle.start)),
+                    GRAPPLE_FORCE * dt
+                ))
+            }
         }
     }
     //tape collision
     canvas.strokeStyle = "#b8ab88"
 
+    const TAPE_WIDTH = 20
+
     for (let i = 0; i < tape.particles.length; i++) {
         canvas.lineCap = "square"
         canvas.setLineDash([])
-        canvas.lineWidth = 20 * gameConsts.scale
+        canvas.lineWidth = TAPE_WIDTH * gameConsts.scale
         canvas.beginPath()
-        canvas.moveTo(tape.particles[i][0][0] * gameConsts.scale, tape.particles[i][0][1] * gameConsts.scale)
-        canvas.lineTo(tape.particles[i][1][0] * gameConsts.scale, tape.particles[i][1][1] * gameConsts.scale)
+        canvas.moveTo(tape.particles[i].start.x * gameConsts.scale, tape.particles[i].start.y * gameConsts.scale)
+        canvas.lineTo(tape.particles[i].end.x * gameConsts.scale, tape.particles[i].end.y * gameConsts.scale)
         canvas.stroke()
     }
-    drawImage(tape.x, tape.y, 40, 40, "tape")
 
+    drawImage(tape.pos.x - 20, tape.pos.y - 20, 40, 40, "tape")
 }
 
 
@@ -505,6 +534,7 @@ function updatePlayer(dt) {
 
     if (grounded && moveX != 0) { // play walk sfx
         footstepSFX.pos(groundedHitboxPos.x * HOWLER_POS_SCALE, groundedHitboxPos.y * HOWLER_POS_SCALE, 0)
+
         if (!footstepSFX.playing()) footstepSFX.play()
     } else {
         //footstepSFX.stop()
@@ -512,17 +542,22 @@ function updatePlayer(dt) {
     if (grounded && !prevGrounded && player.vel.y >= 0) { // just landed
         landSFX.pos(groundedHitboxPos.x * HOWLER_POS_SCALE, groundedHitboxPos.y * HOWLER_POS_SCALE, 0)
 
+        //console.log(groundedHitboxPos.x * HOWLER_POS_SCALE, groundedHitboxPos.y * HOWLER_POS_SCALE)
+
         landSFX.play()
     }
     // jumping
     if (player.jumpTime > 0) {
         player.jumpTime -= dt;
-        if (keyHandler.keyStates.has('jump')) {
+        if (player.jumpBuffer > 0) {
             player.jumpTime = 0;
+            player.jumpBuffer = 0;
 
             player.vel.y -= JUMP_VEL;
         }
     }
+
+    if (player.jumpBuffer > 0) player.jumpBuffer -= dt;
 
     // gravity
     if (!grounded) {
@@ -603,18 +638,13 @@ function renderBG() {
             let drawX = (10 * unitX + t[0]) + 50
             let drawY = (10 * unitY + t[1]) + 50
 
-            for (let j = 0; j < tape.particles.length; j++) {
-
-                if (tape.particles[j] === undefined || tape.particles[j][1].length < 1) {
-                    continue
-                }
-
-                let p = tape.particles[j]
-
-                if (lineCircleIntersect(p, [t[0] + 50, t[1] + 50, 30])) {
-                    t[3] = false
-                }
-            }
+            t[3] = !tape.particles.some(
+                particle => particle !== undefined && particle.end !== null &&
+                    lineCircleIntersect(
+                        [[particle.start.x, particle.start.y], [particle.end.x, particle.end.y]],
+                        [t[0] + 50, t[1] + 50, 30]
+                    )
+            )
 
             canvas.fillStyle = "red"
             if (t[3]) {
@@ -679,7 +709,8 @@ function nextLevel() {
 }
 
 sizeCvs()
-window.onresize = sizeCvs
+//window.onresize = sizeCvs
+window.addEventListener('resize', sizeCvs)
 
 
 function sizeCvs() {
@@ -702,9 +733,9 @@ function sizeCvs() {
         gameScreenCvs.style.width = gameConsts.width + "px"
     }
 }
-function renderObjects() {
+function renderObjects(dt) {
 
-    drawTape()
+    drawTape(dt)
     if (level.data.text != undefined) {
         for (let i = 0; i < level.data.text.length; i++) {
             let t = level.data.text[i]
