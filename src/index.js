@@ -1,5 +1,5 @@
 import { Vec } from "./utils.js"
-import { moveRectCollideMovingRect, rectRectOverlaps } from "./collisions.js"
+import { moveRectCollideMovingRect, rectRectOverlaps, rectCircleOverlaps } from "./collisions.js"
 
 import keyHandler from "./keyhandler.js"
 
@@ -35,6 +35,7 @@ let tape = {
     vY: 0,
     theta: 0,
     particles: [],
+    radius: 20,
 }
 
 const TPS = 30
@@ -229,6 +230,15 @@ function drawTape() {
         tape.vY += 0.5
         if (tape.y >= 450) {
             tape.launched = false
+        }
+
+        // COLLISION
+
+        const colliding = platforms.some(platform => rectCircleOverlaps(platform.pos, platform.size, 
+            { x: tape.x, y: tape.y }, tape.radius));
+
+        if (colliding) {
+            tape.launched = false;
         }
     }
     drawImage(tape.x, tape.y, 40, 40, "tape")
