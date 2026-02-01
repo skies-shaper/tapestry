@@ -3,6 +3,7 @@ import { moveRectCollideMovingRect, rectRectOverlaps, rectCircleOverlaps } from 
 
 import keyHandler from "./keyhandler.js"
 
+
 keyHandler.setKeyBindings({
     //"moveUp": ["KeyW", "ArrowUp"],
     //"moveDown": ["KeyS", "ArrowDown"],
@@ -157,7 +158,7 @@ function platform(src, px, py) {
     }
 }
 let trickyStairs_lvl = {
-    eyePositions: [[100, 75, 1, true], [600, 75, 2, true]],
+    eyePositions: [[100, 55, 1, true], [600, 55, 2, true]],
     platforms: [
         platform(platformTypes.large1, 75, 425),
 
@@ -184,6 +185,12 @@ let trickyStairs_lvl = {
         platform(platformTypes.thin, 650, 0),
         platform(platformTypes.thin, 800, 0),
 
+
+        platform(platformTypes.thin, 225, 175),
+        platform(platformTypes.thin, 375, 175),
+        platform(platformTypes.thin, 500, 175),
+        platform(platformTypes.thin, 650, 175),
+        platform(platformTypes.thin, 700, 175),
 
     ],
     tentacleTraps: [
@@ -730,7 +737,7 @@ function drawTape(dt) {
 
             tape.pos = Vec.add(tape.pos, Vec.scale(tape.vel, dt))
 
-            if (tape.pos.y >= 450 || tape.pos.y < -20 || tape.pos.x < -20 || tape.pos.y > 800) {
+            if (tape.pos.y >= 450 || tape.pos.y < -20 || tape.pos.x < -20 || tape.pos.x > 800) {
                 tape.launched = false
             }
 
