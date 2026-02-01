@@ -223,7 +223,7 @@ let level = {
 const COYOTE_TIME = 0.1
 const JUMP_BUFFER = 0.1
 
-const JUMP_VEL = 700
+const JUMP_VEL = 900
 
 const AIR_FRICTION = 0.98
 const GROUND_FRICTION = 0.999999
@@ -463,7 +463,7 @@ function drawTape(dt) {
                 tape.launched = false;
                 tape.hit = false
             } else {
-                const GRAPPLE_FORCE = 1200
+                const GRAPPLE_FORCE = 2000
                 player.vel = Vec.add(player.vel, Vec.scale(
                     Vec.unit(Vec.sub(curParticle.end, curParticle.start)),
                     GRAPPLE_FORCE * dt
@@ -589,6 +589,9 @@ function updatePlayer(dt) {
     if (player.pos.y > 450) {
         player.pos.x = level.data.respawnPosition[0]
         player.pos.y = level.data.respawnPosition[1]
+        tape.particles = []
+        level.blocked = true
+        level.data.blockerY = level.data.initialBlockerY
         return
     }
     if (player.pos.x < 0) {
