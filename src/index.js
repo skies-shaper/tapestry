@@ -8,8 +8,8 @@ keyHandler.setKeyBindings({
     //"moveDown": ["KeyS", "ArrowDown"],
     "moveLeft": ["KeyA", "ArrowLeft"],
     "moveRight": ["KeyD", "ArrowRight"],
-    'jump': ['Space'],
     "throw": ["MouseLeft"],
+    'jump': ['Space', 'ArrowUp', 'KeyW'],
 })
 
 const gameScreenCvs = document.getElementById("gamescreen")
@@ -27,6 +27,16 @@ gameScreenCvs.addEventListener("mousemove", (event) => {
     mouseY = event.offsetY / gameConsts.scale
 })
 
+let tape = {
+    launched: false,
+    x: 0,
+    y: 0,
+    vX: 0,
+    vY: 0,
+    theta: 0,
+    particles: [],
+}
+
 const TPS = 30
 const TIME_PER_TICK = 1000 / TPS
 const MAX_TIME_BT_TICKS = TIME_PER_TICK * 2 - 3;
@@ -38,6 +48,8 @@ let realTPS = 0;
 
 let totalTicks = 0;
 
+let animationTicks = 0
+
 let templateLevel = {
     eyePositions: [],
     platforms: [],
@@ -45,30 +57,32 @@ let templateLevel = {
     features: []
 }
 let templatePlatform = {
-    src: "",
-
+    src: "platform-rock-large-2",
     pos: { x: 300, y: 300 },
     vel: { x: 0, y: 0 },
-    size: { x: 100, y: 60 },
+    size: { x: 165, y: 65 },
+    imgSize: { x: 175, y: 75 }
 }
 
-let platforms = [ 
-    templatePlatform 
+let platforms = [
+    templatePlatform
 ]
 
 let level;
 
 const COYOTE_TIME = 5
 
-const JUMP_VEL = 300
+const JUMP_VEL = 400
 
 const AIR_FRICTION = 0.8
 const GROUND_FRICTION = 0.95
 
-const GRAVITY_ACCEL = 200
+const GRAVITY_ACCEL = 900
 const MOVE_ACCEL = 200
 
 let player = {
+    direction: 1,
+
     pos: { x: 300, y: 200 }, // CENTER
     vel: { x: 0, y: 0 },
     size: { x: 35, y: 55 },
@@ -77,7 +91,63 @@ let player = {
 
     frame: 0,
     maxFrames: 5,
+
+    frame: 0,
+    width: 35,
+    height: 55,
+    moveState: 0,
+    moveStates: {
+        idle: 0,
+        moving: 1,
+        slide: 2,
+        jump: 3
+    },
+    animation: [
+        "Jelli-1",
+        "Jelli-2",
+        "Jelli-3",
+        "Jelli-2",
+        "Jelli-1",
+        "Jelli-4",
+        "Jelli-5",
+        "Jelli-4",
+    ],
+    idle_animation: [
+        "Jelli-1",
+        "Jelli-1",
+        "Jelli-1",
+        "Jelli-idle",
+        "Jelli-idle",
+        "Jelli-idle"
+
+
+    ]
 }
+
+window.addEventListener("mousedown", (e) => {
+    if (!tape.launched) {
+
+        tape.launched = true
+        tape.theta = tape.theta * -1
+        tape.vX = Math.cos(tape.theta) * 15
+        if (tape.x + 20 < player.pos.x + 30) {
+            tape.vX = Math.cos(tape.theta) * -15
+
+        }
+
+        tape.vY = Math.sin(tape.theta) * -5
+        if (tape.x + 20 < player.pos.x + 30) {
+            tape.vY = Math.sin(tape.theta) * 5
+        }
+        tape.particles.push([[player.pos.x + 30, player.pos.y + 30], []])
+        // tape.x = player.pos.x + 40
+        // tape.y = player.pos.y + 50
+    }
+})
+gameScreenCvs.addEventListener("mousemove", (event) => {
+    mouseX = event.offsetX / gameConsts.scale * window.devicePixelRatio
+    mouseY = event.offsetY / gameConsts.scale * window.devicePixelRatio
+})
 
 _gameLoop()
 countTPS()
@@ -91,6 +161,7 @@ function _gameLoop() {
 
     _realTPSCounter++;
     totalTicks++;
+
     update(DELTA_TIME / 1000);
 
     const updateTime = (Date.now() - time);
@@ -108,29 +179,81 @@ function countTPS() {
 function update(dt) {
     updatePlayer(dt)
 
-    render()
-}
-
-function render() {
     renderBG()
+    if (totalTicks % 3 == 0) {
+        animationTicks++
+    }
+    canvas.fillStyle = "#ffffff"
+    fillRect(0, 0, 800, 450)
 
-    fillRect(player.pos.x - player.size.x/2, player.pos.y - player.size.y/2, 
-        player.size.x, player.size.y)
+    renderObjects() //render animations etc
+    renderWorld()
 
-    for (const platform of platforms) {
-        fillRect(platform.pos.x - platform.size.x/2, platform.pos.y - platform.size.y/2, 
-            platform.size.x, platform.size.y)
+    drawText(totalTicks, 200, 200)
+}
+function drawTape() {
+    //calculate tape position
+    if (!tape.launched) {
+        let circ = 175 * gameConsts.scale * 2 * Math.PI
+
+        canvas.lineWidth = 2 * gameConsts.scale
+        canvas.lineCap = "round"
+        canvas.setLineDash([circ / 120, circ / 60])
+        canvas.strokeStyle = "#ababab"
+
+        canvas.beginPath()
+        canvas.ellipse((player.pos.x + 30) * gameConsts.scale, (player.pos.y + 30) * gameConsts.scale, 100 * gameConsts.scale, 100 * gameConsts.scale, 0, 0, (2 * Math.PI))
+        canvas.stroke()
+
+        //vector from player to mouse
+        //clip at 175 game units
+        // draw tape there
+
+        let xComp = (mouseX) - (player.pos.x + 30)
+        let yComp = (mouseY) - (player.pos.y + 30)
+
+        let unitX = xComp / Math.pow((xComp * xComp) + (yComp * yComp), .5)
+        let unitY = yComp / Math.pow((xComp * xComp) + (yComp * yComp), .5)
+
+
+        tape.x = (100 * unitX + player.pos.x + 30) - 20
+        tape.y = (100 * unitY + player.pos.y + 30) - 20
+        tape.theta = Math.atan(unitY / unitX)
+    } else {
+        tape.particles[tape.particles.length - 1][1][0] = tape.x + 10
+        tape.particles[tape.particles.length - 1][1][1] = tape.y + 25
+        tape.x += tape.vX
+        tape.y += tape.vY
+        tape.vY += 0.5
+        if (tape.y >= 450) {
+            tape.launched = false
+        }
+    }
+    drawImage(tape.x, tape.y, 40, 40, "tape")
+    //tape collision
+    canvas.strokeStyle = "#b8ab88"
+
+    for (let i = 0; i < tape.particles.length; i++) {
+        canvas.lineCap = "square"
+        canvas.setLineDash([])
+        canvas.lineWidth = 20 * gameConsts.scale
+        canvas.beginPath()
+        canvas.moveTo(tape.particles[i][0][0] * gameConsts.scale, tape.particles[i][0][1] * gameConsts.scale)
+        canvas.lineTo(tape.particles[i][1][0] * gameConsts.scale, tape.particles[i][1][1] * gameConsts.scale)
+        canvas.stroke()
     }
 }
 
-
 function updatePlayer(dt) {
+
+    player.moveState = player.moveStates.idle
+
     // check if grounded (check collision rect below player)
     const groundedHitboxPos = Vec.copy(player.pos)
-    groundedHitboxPos.y += player.size.y/2 + 1
+    groundedHitboxPos.y += player.size.y / 2 + 1
 
     const grounded = platforms.some(platform => rectRectOverlaps(
-        groundedHitboxPos, { x: player.size.x - 2, y: 1 }, 
+        groundedHitboxPos, { x: player.size.x - 2, y: 1 },
         platform.pos, platform.size)
     )
 
@@ -140,8 +263,23 @@ function updatePlayer(dt) {
 
     // moving 
     let moveX = 0;
-    if (keyHandler.keyStates.has('moveLeft')) moveX--;
-    if (keyHandler.keyStates.has('moveRight')) moveX++; 
+
+    if (Math.abs(player.vel.x) > 20) {
+        player.moveState = player.moveStates.slide
+    }
+
+    if (keyHandler.keyStates.has('moveLeft')) {
+        moveX -= 2
+        player.moveState = player.moveStates.moving
+        player.direction = -1
+
+    }
+    if (keyHandler.keyStates.has('moveRight')) {
+        moveX += 2
+        player.moveState = player.moveStates.moving
+        player.direction = 1
+
+    }
 
     player.vel.x += moveX * MOVE_ACCEL * dt;
 
@@ -157,10 +295,14 @@ function updatePlayer(dt) {
     }
 
     // gravity
-    if (!grounded) player.vel.y += GRAVITY_ACCEL * dt
+    if (!grounded) {
+        player.moveState = player.moveStates.jump
+
+        player.vel.y += GRAVITY_ACCEL * dt
+    }
 
     // friction
-    player.vel = Vec.scale(player.vel, Math.pow(1 - (grounded? GROUND_FRICTION : AIR_FRICTION), dt))
+    player.vel = Vec.scale(player.vel, Math.pow(1 - (grounded ? GROUND_FRICTION : AIR_FRICTION), dt))
 
     // update position, handling collisions
     let dPos = Vec.scale(player.vel, dt);
@@ -186,31 +328,43 @@ function updatePlayer(dt) {
     }
 }
 
-function tape() {
 
-}
 
 function renderBG() {
-    canvas.fillStyle = "blue"
-    fillRect(0, 0, 1000, 450)
-    canvas.fillStyle = "black"
 
-    fillRect(50, 50, 35, 55)
     //render background of
     //
 }
 
 function renderHUD() { }
 function renderWorld() {
-    for (let i = 0; i < level.eyePositions.length; i++) {
-        //draw eye based on i's value
-    }
-    for (let i = 0; i < level.platforms.length; i++) {
-        //draw image
+
+    // for (let i = 0; i < level.eyePositions.length; i++) {
+    //     //draw eye based on i's value
+    // }
+    for (let i = 0; i < platforms.length; i++) {
+        // let templatePlatform = {
+        //     src: "platform-rock-large-2",
+        //     pos: { x: 300, y: 300 },
+        //     vel: { x: 0, y: 0 },
+        //     size: { x: 150, y: 50 },
+        //     imgSize: { x: 175, y: 75 }
+        // }
+        let p = platforms[i]
+        canvas.fillStyle = "blue"
+        fillRect(p.pos.x, p.pos.y, p.size.x, p.size.y)
+
+        drawImage(
+            p.pos.x - ((p.imgSize.x - p.size.x) / 2),
+            p.pos.y - ((p.imgSize.y - p.size.y) / 2),
+            platforms[i].imgSize.x,
+            platforms[i].imgSize.y,
+            platforms[i].src)
     }
 }
 
 sizeCvs()
+
 window.addEventListener("resize", sizeCvs)
 
 
@@ -218,7 +372,8 @@ function sizeCvs() {
     if (window.innerWidth < (window.innerHeight / 450) * 800) {
         gameConsts.width = window.innerWidth
         gameConsts.height = (window.innerWidth / 800) * 450
-        gameConsts.scale = window.innerWidth / 800
+
+        gameConsts.scale = window.innerWidth / 800 * window.devicePixelRatio
         gameScreenCvs.height = gameConsts.height * window.devicePixelRatio
         gameScreenCvs.width = gameConsts.width * window.devicePixelRatio
         gameScreenCvs.style.height = gameConsts.height + "px"
@@ -227,12 +382,46 @@ function sizeCvs() {
     else {
         gameConsts.width = (window.innerHeight / 450) * 800
         gameConsts.height = window.innerHeight
-        gameConsts.scale = window.innerHeight / 450
+        gameConsts.scale = window.innerHeight / 450 * window.devicePixelRatio
         gameScreenCvs.height = gameConsts.height * window.devicePixelRatio
         gameScreenCvs.width = gameConsts.width * window.devicePixelRatio
         gameScreenCvs.style.height = gameConsts.height + "px"
         gameScreenCvs.style.width = gameConsts.width + "px"
     }
+}
+
+function renderObjects() {
+
+    drawTape()
+
+    // drawImage(100, 100, 100, 100, "Tentacles-" + (animationTicks % 7))
+    // drawImage(200, 100, 100, 100, "Tentacles-" + (animationTicks % 7))
+    let frame
+    switch (player.moveState) {
+        case player.moveStates.moving:
+            frame = player.animation[animationTicks % player.animation.length]
+            break;
+        case player.moveStates.idle:
+            frame = player.idle_animation[animationTicks % player.idle_animation.length]
+            break;
+        case player.moveStates.slide:
+            frame = "Jelli-1"
+
+            break;
+        default:
+            frame = "Jelli-1"
+    }
+    if (player.direction == -1) {
+        canvas.save()
+        canvas.scale(-1, 1)
+        drawImage(0 - 60 - player.pos.x, player.pos.y, 60, 60, frame)
+        canvas.restore()
+
+    } else {
+        drawImage(player.pos.x, player.pos.y, 60, 60, frame)
+
+    }
+
 }
 
 let buttonEvents = {}
@@ -259,11 +448,11 @@ function addButton(id, src, x, y, w, h, callback, options) {
     }
 
     if (mouseInArea(x, y, (x + w), (y + h))) {
-        screen.filter = "brightness(140%)"
+        canvas.filter = "brightness(140%)"
     }
 
     drawImage(x, y, w, h, src)
-    screen.filter = "none"
+    canvas.filter = "none"
 }
 
 function mouseInArea(sX, sY, eX, eY) {
@@ -285,25 +474,17 @@ function drawText(str, x, y, maxWidth) {
     canvas.fillText(str, x * gameConsts.scale, y * gameConsts.scale, maxWidth * gameConsts.scale)
 }
 
-function drawImage(x, y, w, h, src, round) {
+function drawImage(x, y, w, h, src) {
     if (typeof src === "undefined") {
         return
     }
-    if (typeof round !== "undefined") {
-        try {
-            screen.drawImage(document.getElementById(src), Math.floor(x * gameConsts.scale), Math.floor(y * gameConsts.scale), Math.ceil(w * gameConsts.scale), Math.ceil(h * gameConsts.scale))
-        }
-        catch (e) {
-            console.log("Image source not found: " + src)
-        }
-        return;
-    }
     try {
-        screen.drawImage(document.getElementById(src), x * gameConsts.scale, y * gameConsts.scale, w * gameConsts.scale, h * gameConsts.scale)
+        const i = document.getElementById(src)
+        canvas.drawImage(i, Math.floor(x * gameConsts.scale), Math.floor(y * gameConsts.scale), Math.ceil(w * gameConsts.scale), Math.ceil(h * gameConsts.scale))
     }
     catch (e) {
-        console.log("Image source not found: " + src + e.stack)
+        console.log("Image source not found: " + src)
     }
+    return;
 }
 
-export { fillRect, setFont, drawText, drawImage };

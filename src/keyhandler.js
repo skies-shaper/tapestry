@@ -109,7 +109,7 @@ class KeyHandler {
         window.addEventListener('focus', () => this.#keyStates = new Set());
         window.addEventListener('blur', () => this.#keyStates = new Set());
 
-        document.addEventListener('contextmenu', event => event.preventDefault()) // prevents right-click menu
+        // document.addEventListener('contextmenu', event => event.preventDefault()) // prevents right-click menu
     }
 
     get keyStates() { return this.#keyStates; }
