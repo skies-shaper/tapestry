@@ -9,7 +9,8 @@ keyHandler.setKeyBindings({
     "moveLeft": ["KeyA", "ArrowLeft"],
     "moveRight": ["KeyD", "ArrowRight"],
     'jump': ['Space', 'ArrowUp', 'KeyW'],
-    'throwTape': [ 'MouseLeft' ]
+    'throwTape': [ 'MouseLeft' ],
+    'reset': [ 'KeyR' ]
 })
 
 let inGameplay = false
@@ -146,14 +147,16 @@ let templateLevel = {
         platform(platformTypes.large1, 400, 100),
     ],
     tentacleTraps: [
-        [430, 380],
-        [500, 380]
+        { pos: { x: 430, y: 380 }, size: { x: 70, y: 70 }, axis: 'y', dir: -1 },
+        { pos: { x: 500, y: 380 }, size: { x: 70, y: 70 }, axis: 'y', dir: -1 },
+        { pos: { x: 300, y: 300 }, size: { x: 70, y: 70 }, axis: 'y', dir: -1 },
     ],
     backgroundSRC: "",
     features: [],
     respawnPosition: [50, 250],
-    blockerY: 200,
-    initialBlockerY: 200,
+    blockerY: 280, // bottom
+    blockerSize: { x: 25, y: 150 },
+    initialBlockerY: 280, // bottom
     blocked: false
 }
 let templateLevel2 = {
@@ -168,14 +171,15 @@ let templateLevel2 = {
         platform(platformTypes.large1, 850, 305),
     ],
     tentacleTraps: [
-        [430, 380],
-        [500, 380]
+        { pos: { x: 430, y: 380 }, size: { x: 70, y: 70 }, axis: 'y', dir: -1 },
+        { pos: { x: 500, y: 380 }, size: { x: 70, y: 70 }, axis: 'y', dir: -1 },
     ],
     backgroundSRC: "",
     features: [],
     respawnPosition: [50, 250],
-    blockerY: 200,
-    initialBlockerY: 200,
+    blockerY: 280, // bottom
+    blockerSize: { x: 25, y: 75 },
+    initialBlockerY: 280,
     blocked: false
 }
 
@@ -276,10 +280,6 @@ gameScreenCvs.addEventListener("mousemove", (event) => {
     mouseY = event.offsetY / gameConsts.scale * window.devicePixelRatio
 })
 
-function initGame() {
-    nextLevel()
-}
-
 function _gameLoop() {
     if (_stopGameLoop) return;
 
@@ -355,7 +355,7 @@ function update(dt) {
     }
     addButton("#begin", "buttons-begin", 400 - (284 / 2), (300), 285, 85, () => {
         inGameplay = true
-        nextLevel()
+        resetLevel()
     })
 
     setFont("30px Fredoka")
@@ -364,9 +364,8 @@ function update(dt) {
     let text = "A normal game about a racoon"
 
     drawText(text, 400 - (canvas.measureText(text).width / 2 / gameConsts.scale), 150)
-
-
 }
+
 function drawTape(dt) {
     //calculate tape position
     if (!tape.launched) {
@@ -398,6 +397,12 @@ function drawTape(dt) {
 
     } else {
         const curParticle = tape.particles[tape.particles.length - 1];
+        if (!curParticle) {
+            tape.launched = false;
+            tape.hit = false
+            tape.released = true;
+            return;
+        }
 
         if (!tape.released) {
             if (!keyHandler.keyStates.has('throwTape')) tape.released = true;
@@ -450,6 +455,10 @@ function drawTape(dt) {
 
     drawImage(tape.pos.x - 20, tape.pos.y - 20, 40, 40, "tape")
 }
+
+keyHandler.onInputDown('reset', () => {
+    if (inGameplay) resetLevel();
+})
 
 
 function updatePlayer(dt) {
@@ -546,8 +555,7 @@ function updatePlayer(dt) {
     player.pos = Vec.add(player.pos, dPos);
 
     if (player.pos.y > 450) {
-        player.pos.x = level.data.respawnPosition[0]
-        player.pos.y = level.data.respawnPosition[1]
+        resetLevel()
         return
     }
     if (player.pos.x < 0) {
@@ -555,7 +563,7 @@ function updatePlayer(dt) {
     }
     if (player.pos.x > 780) {
         if (level.blocked) {
-            player.pos.x == 780
+            player.pos.x = 780
         }
         else {
             nextLevel()
@@ -621,10 +629,25 @@ function renderWorld() {
     if (level.data.tentacleTraps != undefined) {
         for (let i = 0; i < level.data.tentacleTraps.length; i++) {
             let t = level.data.tentacleTraps
-            drawImage(t[i][0], t[i][1], 70, 70, "Tentacles-" + (animationTicks % 5))
+            drawImage(t[i].pos.x, t[i].pos.y, t[i].size.x, t[i].size.y, 
+                `Tentacles-${t[i].axis}-(${t[i].dir})-${animationTicks % 5}`)
+
+            const colliderPos = Vec.add(t[i].pos, Vec.div(t[i].size, 2))
+            colliderPos[t[i].axis] -= t[i].dir * 3/8 * t[i].size[t[i].axis]
+            
+            const colliderSize = Vec.copy(t[i].size)
+            colliderSize[t[i].axis] /= 4;
+
+            if (rectRectOverlaps(player.pos, player.size, colliderPos, colliderSize)) {
+                // died
+                resetLevel()
+            }
         }
     }
-    drawImage(775, level.data.blockerY, 25, 75, "Door-" + (animationTicks % 5))
+
+    drawImage(775, level.data.blockerY - level.data.blockerSize.y, 
+        level.data.blockerSize.x, level.data.blockerSize.y, 
+        "Door-" + (animationTicks % 5))
 
     for (let i = 0; i < platforms.length; i++) {
 
@@ -637,23 +660,33 @@ function renderWorld() {
             platforms[i].src)
     }
     if (level.numMaskedEyes == 0) {
-        level.data.blockerY += 2
+        level.data.blockerY += 0.03 * level.data.blockerSize.y
     }
-    if (level.data.blockerY - level.data.initialBlockerY > 75) {
+    if (level.data.blockerY - level.data.initialBlockerY > level.data.blockerSize.y) {
         level.blocked = false
     }
 }
-function nextLevel() {
-    console.log(":DD")
-    level.data = levelStorage[level.ID]
-    level.backgroundOffset = Math.floor(Math.random() * 800)
-    platforms = level.data.platforms
+
+function resetLevel() {
+    console.log("Reset level", level.ID)
     console.log(level)
-    level.ID++
+
+    level.data = levelStorage[level.ID]
+    platforms = level.data.platforms
+    
     player.pos.x = level.data.respawnPosition[0]
     player.pos.y = level.data.respawnPosition[1]
     level.numMaskedEyes = level.data.eyePositions.length
     tape.particles = []
+
+    level.blocked = true
+}
+
+function nextLevel() {
+    console.log(":DD")
+    level.ID++
+    level.backgroundOffset = Math.floor(Math.random() * 800)
+    resetLevel()
 }
 
 sizeCvs()
