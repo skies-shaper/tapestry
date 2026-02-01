@@ -2,8 +2,14 @@
 
 
 let player = {
-    x: 200,
-    y: 200,
+    pos: { x: 300, y: 200 }, // CENTER
+    vel: { x: 0, y: 0 },
+    size: { x: 35, y: 55 },
+
+    jumpTime: 0, // stores coyote time
+
+    frame: 0,
+    maxFrames: 5,
     frame: 0,
     width: 35,
     height: 55,
@@ -29,6 +35,7 @@ let player = {
 
     ]
 }
+
 const gameScreenCvs = document.getElementById("gamescreen")
 const canvas = gameScreenCvs.getContext("2d")
 
@@ -56,18 +63,17 @@ window.addEventListener("mousedown", (e) => {
         tape.theta = tape.theta * -1
         console.log(Math.cos(tape.theta))
         tape.vX = Math.cos(tape.theta) * 15
-        if (tape.x + 20 < player.x + 30) {
+        if (tape.x + 20 < player.pos.x + 30) {
             tape.vX = Math.cos(tape.theta) * -15
 
         }
 
         tape.vY = Math.sin(tape.theta) * -5
-        if (tape.x + 20 < player.x + 30) {
+        if (tape.x + 20 < player.pos.x + 30) {
             tape.vY = Math.sin(tape.theta) * 5
-
         }
-        tape.particles.push([[player.x + 30, player.y + 30], []])
-        // tape.x = player.x + 40
+        tape.particles.push([[player.pos.x + 30, player.y + 30], []])
+        // tape.x = player.pos.x + 40
         // tape.y = player.y + 50
     }
 })
@@ -137,14 +143,14 @@ function drawTape() {
         canvas.strokeStyle = "#ababab"
 
         canvas.beginPath()
-        canvas.ellipse((player.x + 30) * gameConsts.scale, (player.y + 30) * gameConsts.scale, 100 * gameConsts.scale, 100 * gameConsts.scale, 0, 0, (2 * Math.PI))
+        canvas.ellipse((player.pos.x + 30) * gameConsts.scale, (player.y + 30) * gameConsts.scale, 100 * gameConsts.scale, 100 * gameConsts.scale, 0, 0, (2 * Math.PI))
         canvas.stroke()
 
         //vector from player to mouse
         //clip at 175 game units
         // draw tape there
 
-        let xComp = (mouseX) - (player.x + 30)
+        let xComp = (mouseX) - (player.pos.x + 30)
         let yComp = (mouseY) - (player.y + 30)
 
         let unitX = xComp / Math.pow((xComp * xComp) + (yComp * yComp), .5)
@@ -152,10 +158,10 @@ function drawTape() {
 
 
         // canvas.beginPath()
-        // canvas.moveTo((player.x + 30) * gameConsts.scale, (player.y + 30) * gameConsts.scale)
-        // canvas.lineTo((175 * unitX + player.x + 30) * gameConsts.scale, (175 * unitY + player.y + 30) * gameConsts.scale)
+        // canvas.moveTo((player.pos.x + 30) * gameConsts.scale, (player.y + 30) * gameConsts.scale)
+        // canvas.lineTo((175 * unitX + player.pos.x + 30) * gameConsts.scale, (175 * unitY + player.y + 30) * gameConsts.scale)
         // canvas.stroke()
-        tape.x = (100 * unitX + player.x + 30) - 20
+        tape.x = (100 * unitX + player.pos.x + 30) - 20
         tape.y = (100 * unitY + player.y + 30) - 20
         tape.theta = Math.atan(unitY / unitX)
     } else {
@@ -193,11 +199,11 @@ function renderObjects() {
     // drawImage(100, 100, 100, 100, "Tentacles-" + (animationTicks % 7))
     // drawImage(200, 100, 100, 100, "Tentacles-" + (animationTicks % 7))
     if (player.moving) {
-        drawImage(player.x, player.y, 60, 60, player.animation[animationTicks % player.animation.length])
+        drawImage(player.pos.x, player.y, 60, 60, player.animation[animationTicks % player.animation.length])
 
     }
     if (!player.moving) {
-        drawImage(player.x, player.y, 60, 60, player.idle_animation[animationTicks % player.idle_animation.length])
+        drawImage(player.pos.x, player.y, 60, 60, player.idle_animation[animationTicks % player.idle_animation.length])
     }
 }
 
@@ -293,6 +299,7 @@ function drawImage(x, y, w, h, src) {
     }
     try {
         const i = document.getElementById(src)
+        console.log(i)
         canvas.drawImage(i, Math.floor(x * gameConsts.scale), Math.floor(y * gameConsts.scale), Math.ceil(w * gameConsts.scale), Math.ceil(h * gameConsts.scale))
     }
     catch (e) {
