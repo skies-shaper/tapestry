@@ -704,7 +704,14 @@ function renderWorld() {
                 resetLevel()
             }
 
-            if (!lowBubble.playing()) { lowBubble.play() }
+            if (t[i].soundID === undefined) t[i].soundID = lowBubble.play();
+            lowBubble.pos(
+                (t[i].pos.x + t[i].size.x/2) * HOWLER_POS_SCALE, 
+                (t[i].pos.y + t[i].size.y/2) * HOWLER_POS_SCALE, 
+                0, 
+                t[i].soundID
+            )
+            if (!lowBubble.playing(t[i].soundID)) { lowBubble.play(t[i].soundID) }
         }
     }
 
