@@ -14,6 +14,8 @@ keyHandler.setKeyBindings({
 const gameScreenCvs = document.getElementById("gamescreen")
 const canvas = gameScreenCvs.getContext("2d")
 
+let buttonEvents = {}
+let buttonignoresignals = {}
 let gameConsts = {
     width: 800,
     height: 450,
@@ -41,13 +43,6 @@ let realTPS = 0;
 
 let totalTicks = 0;
 let animationTicks = 0
-
-let templateLevel = {
-    eyePositions: [],
-    platforms: [],
-    backgroundSRC: "",
-    features: []
-}
 let templatePlatform = {
     src: "platform-rock-large-2",
     pos: { x: 300, y: 300 },
@@ -56,11 +51,26 @@ let templatePlatform = {
     imgSize: { x: 175, y: 75 }
 }
 
+let templateLevel = {
+    eyePositions: [[200, 200, 0], [150, 100, 3]],
+    platforms: [templatePlatform],
+    backgroundSRC: "",
+    features: []
+}
+
 let platforms = [
     templatePlatform
 ]
 
-let level;
+let levelStorage = [
+    templateLevel
+]
+
+let level = {
+    ID: 0,
+    backgroundOffset: 0,
+    data: {}
+};
 
 const COYOTE_TIME = 5
 
@@ -133,12 +143,20 @@ window.addEventListener("mousedown", (e) => {
         // tape.y = player.pos.y + 50
     }
 })
+_gameLoop()
+countTPS()
+
+
+initGame()
+
 gameScreenCvs.addEventListener("mousemove", (event) => {
     mouseX = event.offsetX / gameConsts.scale * window.devicePixelRatio
     mouseY = event.offsetY / gameConsts.scale * window.devicePixelRatio
 })
-_gameLoop()
-countTPS()
+
+function initGame() {
+    nextLevel()
+}
 
 function _gameLoop() {
     if (_stopGameLoop) return;
@@ -165,18 +183,17 @@ function countTPS() {
 }
 
 function update(dt) {
-    renderBG()
     if (totalTicks % 3 == 0) {
         animationTicks++
     }
     canvas.fillStyle = "#ffffff"
     fillRect(0, 0, 800, 450)
+    renderBG()
 
     renderObjects() //render animations etc
     renderWorld()
 
     updatePlayer(dt)
-    render()
 }
 function drawTape() {
     //calculate tape position
@@ -232,10 +249,6 @@ function drawTape() {
         canvas.lineTo(tape.particles[i][1][0] * gameConsts.scale, tape.particles[i][1][1] * gameConsts.scale)
         canvas.stroke()
     }
-}
-
-function render() {
-    renderBG()
 }
 
 
@@ -325,7 +338,33 @@ function renderBG() {
     //get random 
     //render background of
     //
+    drawImage(0, 0, 800 + level.backgroundOffset, 450, "BG")
+
+    if (level.data.eyePositions != undefined) {
+        console.log("eyes")
+        for (let i = 0; i < level.data.eyePositions.length; i++) {
+            let t = level.data.eyePositions[i]
+            drawImage(t[0], t[1], 100, 100, "Eye-" + t[2])
+            let xComp = (player.pos.x) - t[0]
+            let yComp = (player.pos.y) - t[1]
+
+            let unitX = xComp / Math.pow((xComp * xComp) + (yComp * yComp), .5)
+            let unitY = yComp / Math.pow((xComp * xComp) + (yComp * yComp), .5)
+
+            let drawX = (10 * unitX + t[0]) + 50
+            let drawY = (10 * unitY + t[1]) + 50
+
+            canvas.fillStyle = "red"
+            canvas.beginPath()
+            canvas.ellipse(drawX * gameConsts.scale, drawY * gameConsts.scale, 5 * gameConsts.scale, 5 * gameConsts.scale, 0, 0, 2 * Math.PI)
+            canvas.fill()
+        }
+    }
+    else {
+        console.log(level)
+    }
 }
+
 
 function renderHUD() { }
 function renderWorld() {
@@ -333,16 +372,10 @@ function renderWorld() {
     //     //draw eye based on i's value
     // }
     for (let i = 0; i < platforms.length; i++) {
-        // let templatePlatform = {
-        //     src: "platform-rock-large-2",
-        //     pos: { x: 300, y: 300 },
-        //     vel: { x: 0, y: 0 },
-        //     size: { x: 150, y: 50 },
-        //     imgSize: { x: 175, y: 75 }
-        // }
+
         let p = platforms[i]
-        canvas.fillStyle = "blue"
-        fillRect(p.pos.x - p.size.x / 2, p.pos.y - p.size.y / 2, p.size.x, p.size.y)
+        // canvas.fillStyle = "blue"
+        // fillRect(p.pos.x - p.size.x / 2, p.pos.y - p.size.y / 2, p.size.x, p.size.y)
 
         drawImage(
             p.pos.x - p.imgSize.x / 2,
@@ -351,6 +384,14 @@ function renderWorld() {
             platforms[i].imgSize.y,
             platforms[i].src)
     }
+}
+function nextLevel() {
+    level.data = levelStorage[level.ID]
+    level.backgroundOffset = Math.floor(Math.random() * 800)
+    platforms = level.data.platforms
+    console.log(level)
+    level.ID++
+
 }
 
 sizeCvs()
@@ -399,7 +440,7 @@ function renderObjects() {
             frame = "Jelli-1"
     }
     // canvas.fillStyle = "blue"
-    fillRect(player.pos.x - player.size.x / 2, player.pos.y - player.size.y / 2, player.size.x, player.size.y)
+    // fillRect(player.pos.x - player.size.x / 2, player.pos.y - player.size.y / 2, player.size.x, player.size.y)
 
     if (player.direction == -1) {
         canvas.save()
@@ -414,8 +455,6 @@ function renderObjects() {
 
 }
 
-let buttonEvents = {}
-let buttonignoresignals = {}
 
 function addButton(id, src, x, y, w, h, callback, options) {
 
