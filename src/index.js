@@ -9,6 +9,7 @@ keyHandler.setKeyBindings({
     "moveLeft": ["KeyA", "ArrowLeft"],
     "moveRight": ["KeyD", "ArrowRight"],
     'jump': ['Space', 'ArrowUp', 'KeyW'],
+    'throwTape': [ 'MouseLeft' ]
 })
 
 let inGameplay = false
@@ -192,6 +193,7 @@ let level = {
 };
 
 const COYOTE_TIME = 0.1
+const JUMP_BUFFER = 0.1
 
 const JUMP_VEL = 700
 
@@ -210,6 +212,7 @@ let player = {
     size: { x: 35, y: 55 },
 
     jumpTime: 0, // stores coyote time
+    jumpBuffer: 0, // buffer that allows jumping if space was pressed early
 
     frame: 0,
     maxFrames: 5,
@@ -245,7 +248,12 @@ let player = {
     ],
     grounded: false
 }
-window.addEventListener("mousedown", (e) => {
+
+keyHandler.onInputDown('jump', () => {
+    player.jumpBuffer = JUMP_BUFFER
+})
+
+keyHandler.onInputDown('throwTape', () => {
     if (!tape.launched && inGameplay) {
 
         tape.launched = true
@@ -488,12 +496,15 @@ function updatePlayer(dt) {
     // jumping
     if (player.jumpTime > 0) {
         player.jumpTime -= dt;
-        if (keyHandler.keyStates.has('jump')) {
+        if (player.jumpBuffer > 0) {
             player.jumpTime = 0;
+            player.jumpBuffer = 0;
 
             player.vel.y -= JUMP_VEL;
         }
     }
+
+    if (player.jumpBuffer > 0) player.jumpBuffer -= dt;
 
     // gravity
     if (!grounded) {
