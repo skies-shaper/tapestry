@@ -24,16 +24,16 @@ let gameConsts = {
 }
 let mouseX = 400
 let mouseY = 400
-const HOWLER_POS_SCALE = 0.02
+const HOWLER_POS_SCALE = 0.01
 
 const footstepSFX = new Howl({
     src: ['/public/footstep.wav'],
-    volume: 0.5,
+    volume: 0.7,
 })
 
 const landSFX = new Howl({
     src: ['/public/land.wav'],
-    volume: 1.5,
+    volume: 2,
 })
 
 const musicLoop = new Howl({
@@ -45,7 +45,7 @@ const musicLoop = new Howl({
 
 const howlBg = new Howl({
     src: ['/public/howl-bg.mp3'],
-    volume: 0.1,
+    volume: 0.15,
     loop: true,
     html: true
 })
@@ -187,16 +187,16 @@ let level = {
     data: {}
 };
 
-const COYOTE_TIME = 5
+const COYOTE_TIME = 0.1
 
-const JUMP_VEL = 500
+const JUMP_VEL = 700
 
-const AIR_FRICTION = 0.8
-const GROUND_FRICTION = 0.95
+const AIR_FRICTION = 0.98
+const GROUND_FRICTION = 0.999999
 
-const GRAVITY_ACCEL = 900
+const GRAVITY_ACCEL = 600
 const GRAVITY_DOWNWARDS_ACCEL = 600
-const GROUND_MOVE_ACCEL = 200
+const GROUND_MOVE_ACCEL = 1000
 const AIR_MOVE_ACCEL = 300
 
 let player = {
@@ -302,7 +302,15 @@ function countTPS() {
 function update(dt) {
     if (Howler.ctx && Howler.ctx.state === 'running') { // configure sound listener
         Howler.orientation(0, 0, 1, 0, -1, 0); // flip y to make +y down
-        Howler.pos(gameConsts.width / 2 * HOWLER_POS_SCALE, gameConsts.height / 2 * HOWLER_POS_SCALE, -5)
+
+        const listenerPos = [ 
+            gameConsts.width / gameConsts.scale / 2 * HOWLER_POS_SCALE, 
+            gameConsts.height / gameConsts.scale / 2 * HOWLER_POS_SCALE, 
+            -5
+        ]
+
+        Howler.pos(...listenerPos)
+        //console.log("LISTENER", ...listenerPos)
     }
     if (inGameplay) {
         if (totalTicks % 3 == 0) {
@@ -357,6 +365,8 @@ function update(dt) {
 function drawTape() {
     //calculate tape position
     if (!tape.launched) {
+        const RADIUS = 60
+
         let circ = 175 * gameConsts.scale * 2 * Math.PI
 
         canvas.lineWidth = 2 * gameConsts.scale
@@ -365,7 +375,7 @@ function drawTape() {
         canvas.strokeStyle = "#ababab"
 
         canvas.beginPath()
-        canvas.ellipse((player.pos.x) * gameConsts.scale, (player.pos.y) * gameConsts.scale, 100 * gameConsts.scale, 100 * gameConsts.scale, 0, 0, (2 * Math.PI))
+        canvas.ellipse((player.pos.x) * gameConsts.scale, (player.pos.y) * gameConsts.scale, RADIUS * gameConsts.scale, RADIUS * gameConsts.scale, 0, 0, (2 * Math.PI))
         canvas.stroke()
 
         let xComp = (mouseX) - (player.pos.x)
@@ -374,10 +384,10 @@ function drawTape() {
         let unitX = xComp / Math.pow((xComp * xComp) + (yComp * yComp), .5)
         let unitY = yComp / Math.pow((xComp * xComp) + (yComp * yComp), .5)
 
-        tape.x = (100 * unitX + player.pos.x) - 20
-        tape.y = (100 * unitY + player.pos.y) - 20
+        tape.x = (RADIUS * unitX + player.pos.x) - 20
+        tape.y = (RADIUS * unitY + player.pos.y) - 20
         if (isNaN(tape.x)) {
-            tape.x = (100 + player.pos.x + 30)
+            tape.x = (RADIUS + player.pos.x + 30)
             tape.y = player.pos.y + 30
         }
         tape.vX = unitX * 13
@@ -457,12 +467,15 @@ function updatePlayer(dt) {
 
     if (grounded && moveX != 0) { // play walk sfx
         footstepSFX.pos(groundedHitboxPos.x * HOWLER_POS_SCALE, groundedHitboxPos.y * HOWLER_POS_SCALE, 0)
+
         if (!footstepSFX.playing()) footstepSFX.play()
     } else {
         //footstepSFX.stop()
     }
     if (grounded && !prevGrounded && player.vel.y >= 0) { // just landed
         landSFX.pos(groundedHitboxPos.x * HOWLER_POS_SCALE, groundedHitboxPos.y * HOWLER_POS_SCALE, 0)
+
+        //console.log(groundedHitboxPos.x * HOWLER_POS_SCALE, groundedHitboxPos.y * HOWLER_POS_SCALE)
 
         landSFX.play()
     }
