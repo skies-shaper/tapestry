@@ -650,10 +650,10 @@ function update(dt) {
         canvas.ellipse(drawX * gameConsts.scale, drawY * gameConsts.scale, 5 * gameConsts.scale, 5 * gameConsts.scale, 0, 0, 2 * Math.PI)
         canvas.fill()
     }
-    // addButton("#begin", "buttons-begin", 400 - (284 / 2), (300), 285, 85, () => {
-    //     inGameplay = true
-    //     resetLevel()
-    // })
+    addButton("#begin", "buttons-begin", 400 - (284 / 2), (300), 285, 85, () => {
+        inGameplay = true
+        resetLevel()
+    })
 
     setFont("30px Lacquer")
     canvas.fillStyle = "#b8ab88"
