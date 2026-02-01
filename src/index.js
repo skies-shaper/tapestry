@@ -177,7 +177,8 @@ let templateLevel = {
         [250, 170, "Cover up all of the ", "#897e61", 20],
         [450, 170, "Forest Beast's Eyes", "#d005bf", 20],
         [250, 190, "in order to be freed from each level", "#897e61", 20],
-    ]
+    ],
+    maxTapes: -1
 
 }
 let templateLevel2 = {
@@ -216,7 +217,8 @@ let templateLevel2 = {
     respawnPosition: [50, 250],
     blockerY: 200,
     initialBlockerY: 200,
-    blocked: false
+    blocked: false,
+    maxTapes: 6
 }
 
 let platforms = [
@@ -256,7 +258,7 @@ let player = {
 
     jumpTime: 0, // stores coyote time
     jumpBuffer: 0, // buffer that allows jumping if space was pressed early
-
+    numTapes: 0,
     frame: 0,
     maxFrames: 5,
     frame: 0,
@@ -299,7 +301,10 @@ keyHandler.onInputDown('jump', () => {
 
 keyHandler.onInputDown('throwTape', () => {
     if (!tape.launched && inGameplay) {
-
+        if (player.numTapes == 0) {
+            return
+        }
+        player.numTapes--
         tape.launched = true
         tape.released = false
         tapeRip.pos(tape.pos.x * HOWLER_POS_SCALE, tape.pos.y * HOWLER_POS_SCALE)
@@ -384,6 +389,8 @@ function update(dt) {
         renderWorld()
 
         updatePlayer(dt)
+
+        drawTapeHUD()
         return
     }
     // otherwise, main menu!
@@ -418,6 +425,23 @@ function update(dt) {
     let text = "A normal game about a racoon"
 
     drawText(text, 400 - (canvas.measureText(text).width / 2 / gameConsts.scale), 150)
+
+
+}
+function drawTapeHUD() {
+    if (level.data.maxTapes == -1) {
+        drawImage(10, 10, 40, 40, "tape")
+        drawImage(46, 10, 40, 40, "tape")
+        return
+    }
+    for (let i = 0; i < level.data.maxTapes; i++) {
+        if (i >= player.numTapes) {
+            drawImage(6 + (i * 46), 6, 40, 40, "tape-empty")
+            continue
+
+        }
+        drawImage(6 + (i * 46), 6, 40, 40, "tape")
+    }
 
 
 }
@@ -502,7 +526,11 @@ function drawTape(dt) {
         canvas.lineTo(tape.particles[i].end.x * gameConsts.scale, tape.particles[i].end.y * gameConsts.scale)
         canvas.stroke()
     }
+    if (player.numTapes == 0) {
+        drawImage(tape.pos.x - 20, tape.pos.y - 20, 40, 40, "tape-empty")
+        return
 
+    }
     drawImage(tape.pos.x - 20, tape.pos.y - 20, 40, 40, "tape")
 }
 
@@ -731,6 +759,9 @@ function nextLevel() {
     level.numMaskedEyes = level.data.eyePositions.length
     tape.particles = []
     level.blocked = true
+    if (level.data.numTapes != -1) {
+        player.numTapes = level.data.maxTapes
+    }
 }
 
 sizeCvs()
