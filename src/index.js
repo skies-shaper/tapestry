@@ -163,7 +163,6 @@ let templateLevel = {
     tentacleTraps: [
         { pos: { x: 430, y: 380 }, size: { x: 70, y: 70 }, axis: 'y', dir: -1 },
         { pos: { x: 500, y: 380 }, size: { x: 70, y: 70 }, axis: 'y', dir: -1 },
-        { pos: { x: 300, y: 300 }, size: { x: 70, y: 70 }, axis: 'y', dir: -1 },
     ],
     backgroundSRC: "",
     features: [],
