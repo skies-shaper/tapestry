@@ -465,7 +465,7 @@ let platforms = [
 ]
 
 let levelStorage = [
-    templateLevel, templateLevel2, youonlygottwoshots_lvl, trickyStairs_lvl
+    templateLevel, templateLevel2, youonlygottwoshots_lvl, trickyStairs_lvl, level4, level5, level6
 ]
 
 let level = {
