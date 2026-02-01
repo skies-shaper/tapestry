@@ -52,7 +52,7 @@ function moveRectCollideMovingRect(pos1, v1, size1, pos2, v2, size2) {
     return [ nPos, collided ];
 }   
 
-function rectRectOverlap(pos1, size1, pos2, size2) {
+function rectRectOverlaps(pos1, size1, pos2, size2) {
     const halfSize1 = Vec.div(size1, 2)
     const halfSize2 = Vec.div(size2, 2)
 
@@ -64,4 +64,15 @@ function rectRectOverlap(pos1, size1, pos2, size2) {
     )
 }
 
-export { moveRectCollideMovingRect, rectRectOverlap }
+function rectCircleOverlaps(rectPos, rectSize, circlePos, circleR) {
+    const testPos = Vec.copy(circlePos)
+
+    for (const dir of ['x', 'y']) {
+        testPos[dir] = Math.max(rectPos[dir] - rectSize[dir]/2, 
+            Math.min(rectPos[dir] + rectSize[dir]/2, testPos[dir]))
+    }
+
+    return Vec.dist(circlePos, testPos) <= circleR
+}
+
+export { moveRectCollideMovingRect, rectRectOverlaps, rectCircleOverlaps }

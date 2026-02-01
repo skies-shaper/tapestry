@@ -1,5 +1,5 @@
 import { Vec } from "./utils.js"
-import { moveRectCollideMovingRect, rectRectOverlap } from "./collisions.js"
+import { moveRectCollideMovingRect, rectRectOverlaps, rectCircleOverlaps } from "./collisions.js"
 
 import keyHandler from "./keyhandler.js"
 
@@ -8,6 +8,7 @@ keyHandler.setKeyBindings({
     //"moveDown": ["KeyS", "ArrowDown"],
     "moveLeft": ["KeyA", "ArrowLeft"],
     "moveRight": ["KeyD", "ArrowRight"],
+    "throw": ["MouseLeft"],
     'jump': ['Space', 'ArrowUp', 'KeyW'],
 })
 
@@ -22,6 +23,12 @@ let gameConsts = {
     scale: 1
 }
 let mouseX, mouseY;
+
+gameScreenCvs.addEventListener("mousemove", (event) => {
+    mouseX = event.offsetX / gameConsts.scale
+    mouseY = event.offsetY / gameConsts.scale
+})
+
 let tape = {
     launched: false,
     x: 0,
@@ -30,6 +37,7 @@ let tape = {
     vY: 0,
     theta: 0,
     particles: [],
+    radius: 20,
 }
 
 const TPS = 30
@@ -42,6 +50,7 @@ let _realTPSCounter = 0;
 let realTPS = 0;
 
 let totalTicks = 0;
+
 let animationTicks = 0
 let templatePlatform = {
     src: "platform-rock-large-2",
@@ -84,6 +93,7 @@ const MOVE_ACCEL = 200
 
 let player = {
     direction: 1,
+
     pos: { x: 300, y: 200 }, // CENTER
     vel: { x: 0, y: 0 },
     size: { x: 35, y: 55 },
@@ -92,6 +102,7 @@ let player = {
 
     frame: 0,
     maxFrames: 5,
+
     frame: 0,
     width: 35,
     height: 55,
@@ -123,6 +134,7 @@ let player = {
 
     ]
 }
+
 window.addEventListener("mousedown", (e) => {
     if (!tape.launched) {
 
@@ -154,9 +166,8 @@ gameScreenCvs.addEventListener("mousemove", (event) => {
     mouseY = event.offsetY / gameConsts.scale * window.devicePixelRatio
 })
 
-function initGame() {
-    nextLevel()
-}
+_gameLoop()
+countTPS()
 
 function _gameLoop() {
     if (_stopGameLoop) return;
@@ -183,6 +194,9 @@ function countTPS() {
 }
 
 function update(dt) {
+    updatePlayer(dt)
+
+    renderBG()
     if (totalTicks % 3 == 0) {
         animationTicks++
     }
@@ -195,6 +209,7 @@ function update(dt) {
 
     updatePlayer(dt)
 }
+
 function drawTape() {
     //calculate tape position
     if (!tape.launched) {
@@ -235,6 +250,15 @@ function drawTape() {
         if (tape.y >= 450) {
             tape.launched = false
         }
+
+        // COLLISION
+
+        const colliding = platforms.some(platform => rectCircleOverlaps(platform.pos, platform.size, 
+            { x: tape.x, y: tape.y }, tape.radius));
+
+        if (colliding) {
+            tape.launched = false;
+        }
     }
     drawImage(tape.x, tape.y, 40, 40, "tape")
     //tape collision
@@ -251,15 +275,15 @@ function drawTape() {
     }
 }
 
-
 function updatePlayer(dt) {
+
     player.moveState = player.moveStates.idle
 
     // check if grounded (check collision rect below player)
     const groundedHitboxPos = Vec.copy(player.pos)
     groundedHitboxPos.y += player.size.y / 2 + 1
 
-    const grounded = platforms.some(platform => rectRectOverlap(
+    const grounded = platforms.some(platform => rectRectOverlaps(
         groundedHitboxPos, { x: player.size.x - 2, y: 1 },
         platform.pos, platform.size)
     )
@@ -270,6 +294,7 @@ function updatePlayer(dt) {
 
     // moving 
     let moveX = 0;
+
     if (Math.abs(player.vel.x) > 20) {
         player.moveState = player.moveStates.slide
     }
@@ -292,6 +317,7 @@ function updatePlayer(dt) {
     // jumping
     if (player.jumpTime > 0) {
         player.jumpTime -= dt;
+
         if (keyHandler.keyStates.has('jump')) {
             player.jumpTime = 0;
 
@@ -314,7 +340,7 @@ function updatePlayer(dt) {
 
     for (const platform of platforms) {
         const [nPos, collided] = moveRectCollideMovingRect(
-            player.pos, dPos, player.size,
+            player.pos, dPos, player.size, 
             platform.pos, platform.vel, platform.size
         )
 
@@ -328,10 +354,11 @@ function updatePlayer(dt) {
     player.pos = Vec.add(player.pos, dPos);
 
     // if still colliding, player has been squished
-    if (platforms.some(platform => rectRectOverlap(player.pos, player.size, platform.pos, platform.size))) {
+    if (platforms.some(platform => rectRectOverlaps(player.pos, player.size, platform.pos, platform.size))) {
         // kill player
     }
 }
+
 
 
 function renderBG() {
@@ -368,6 +395,7 @@ function renderBG() {
 
 function renderHUD() { }
 function renderWorld() {
+
     // for (let i = 0; i < level.eyePositions.length; i++) {
     //     //draw eye based on i's value
     // }
@@ -395,13 +423,15 @@ function nextLevel() {
 }
 
 sizeCvs()
-window.onresize = sizeCvs
+
+window.addEventListener("resize", sizeCvs)
 
 
 function sizeCvs() {
     if (window.innerWidth < (window.innerHeight / 450) * 800) {
         gameConsts.width = window.innerWidth
         gameConsts.height = (window.innerWidth / 800) * 450
+
         gameConsts.scale = window.innerWidth / 800 * window.devicePixelRatio
         gameScreenCvs.height = gameConsts.height * window.devicePixelRatio
         gameScreenCvs.width = gameConsts.width * window.devicePixelRatio
@@ -418,6 +448,7 @@ function sizeCvs() {
         gameScreenCvs.style.width = gameConsts.width + "px"
     }
 }
+
 function renderObjects() {
 
     drawTape()
@@ -517,5 +548,3 @@ function drawImage(x, y, w, h, src) {
     return;
 }
 
-
-export { fillRect, setFont, drawText, drawImage };
