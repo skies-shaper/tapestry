@@ -165,7 +165,6 @@ let templateLevel = {
     tentacleTraps: [
         { pos: { x: 430, y: 380 }, size: { x: 70, y: 70 }, axis: 'y', dir: -1 },
         { pos: { x: 500, y: 380 }, size: { x: 70, y: 70 }, axis: 'y', dir: -1 },
-        { pos: { x: 300, y: 300 }, size: { x: 70, y: 70 }, axis: 'y', dir: -1 },
     ],
     backgroundSRC: "",
     features: [],
@@ -181,7 +180,8 @@ let templateLevel = {
         [250, 170, "Cover up all of the ", "#897e61", 20],
         [450, 170, "Forest Beast's Eyes", "#d005bf", 20],
         [250, 190, "in order to be freed from each level", "#897e61", 20],
-    ]
+    ],
+    maxTapes: -1
 }
 let templateLevel2 = {
     eyePositions: [[300, 200, 0, true], [600, 100, 3, true]],
@@ -220,7 +220,8 @@ let templateLevel2 = {
     blockerY: 280, // bottom
     blockerSize: { x: 25, y: 75 },
     initialBlockerY: 280,
-    blocked: false
+    blocked: false,
+    maxTapes: 6
 }
 
 let platforms = [
@@ -260,7 +261,7 @@ let player = {
 
     jumpTime: 0, // stores coyote time
     jumpBuffer: 0, // buffer that allows jumping if space was pressed early
-
+    numTapes: 0,
     frame: 0,
     maxFrames: 5,
     frame: 0,
@@ -303,7 +304,10 @@ keyHandler.onInputDown('jump', () => {
 
 keyHandler.onInputDown('throwTape', () => {
     if (!tape.launched && inGameplay) {
-
+        if (player.numTapes == 0) {
+            return
+        }
+        player.numTapes--
         tape.launched = true
         tape.released = false
         tapeRip.pos(tape.pos.x * HOWLER_POS_SCALE, tape.pos.y * HOWLER_POS_SCALE)
@@ -384,6 +388,8 @@ function update(dt) {
         renderWorld()
 
         updatePlayer(dt)
+
+        drawTapeHUD()
         return
     }
     // otherwise, main menu!
@@ -418,6 +424,25 @@ function update(dt) {
     let text = "A normal game about a racoon"
 
     drawText(text, 400 - (canvas.measureText(text).width / 2 / gameConsts.scale), 150)
+
+
+}
+function drawTapeHUD() {
+    if (level.data.maxTapes == -1) {
+        drawImage(10, 10, 40, 40, "tape")
+        drawImage(46, 10, 40, 40, "tape")
+        return
+    }
+    for (let i = 0; i < level.data.maxTapes; i++) {
+        if (i >= player.numTapes) {
+            drawImage(6 + (i * 46), 6, 40, 40, "tape-empty")
+            continue
+
+        }
+        drawImage(6 + (i * 46), 6, 40, 40, "tape")
+    }
+
+
 }
 
 function drawTape(dt) {
@@ -507,7 +532,11 @@ function drawTape(dt) {
         canvas.lineTo(tape.particles[i].end.x * gameConsts.scale, tape.particles[i].end.y * gameConsts.scale)
         canvas.stroke()
     }
+    if (player.numTapes == 0) {
+        drawImage(tape.pos.x - 20, tape.pos.y - 20, 40, 40, "tape-empty")
+        return
 
+    }
     drawImage(tape.pos.x - 20, tape.pos.y - 20, 40, 40, "tape")
 }
 
@@ -692,16 +721,16 @@ function renderWorld() {
     if (level.data.tentacleTraps != undefined) {
         for (let i = 0; i < level.data.tentacleTraps.length; i++) {
             let t = level.data.tentacleTraps
-            drawImage(t[i].pos.x, t[i].pos.y, t[i].size.x, t[i].size.y, 
+            drawImage(t[i].pos.x, t[i].pos.y, t[i].size.x, t[i].size.y,
                 `Tentacles-${t[i].axis}-(${t[i].dir})-${animationTicks % 5}`)
 
             const colliderPos = Vec.add(t[i].pos, Vec.div(t[i].size, 2))
-            colliderPos[t[i].axis] -= t[i].dir * 3/8 * t[i].size[t[i].axis]
-            
+            colliderPos[t[i].axis] -= t[i].dir * 3 / 8 * t[i].size[t[i].axis]
+
             const colliderSize = Vec.copy(t[i].size)
             colliderSize[t[i].axis] /= 4;
 
-            if (rectRectOverlaps(player.pos, { x: player.size.x*0.4, y: player.size.y }, colliderPos, colliderSize)) {
+            if (rectRectOverlaps(player.pos, { x: player.size.x * 0.4, y: player.size.y }, colliderPos, colliderSize)) {
                 // died
                 resetLevel()
             }
@@ -717,8 +746,8 @@ function renderWorld() {
         }
     }
 
-    drawImage(775, level.data.blockerY - level.data.blockerSize.y, 
-        level.data.blockerSize.x, level.data.blockerSize.y, 
+    drawImage(775, level.data.blockerY - level.data.blockerSize.y,
+        level.data.blockerSize.x, level.data.blockerSize.y,
         "Door-" + (animationTicks % 5))
 
     for (let i = 0; i < platforms.length; i++) {
@@ -752,13 +781,16 @@ function resetLevel() {
 
     level.data = levelStorage[level.ID]
     platforms = level.data.platforms
-    
+
     player.pos.x = level.data.respawnPosition[0]
     player.pos.y = level.data.respawnPosition[1]
     level.numMaskedEyes = level.data.eyePositions.length
     tape.particles = []
 
     level.blocked = true
+    if (level.data.numTapes != -1) {
+        player.numTapes = level.data.maxTapes
+    }
 }
 
 function nextLevel() {
