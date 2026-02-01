@@ -188,9 +188,8 @@ function update(dt) {
 
     renderObjects() //render animations etc
     renderWorld()
-
-    drawText(totalTicks, 200, 200)
 }
+
 function drawTape() {
     //calculate tape position
     if (!tape.launched) {
@@ -215,9 +214,12 @@ function drawTape() {
         let unitX = xComp / Math.pow((xComp * xComp) + (yComp * yComp), .5)
         let unitY = yComp / Math.pow((xComp * xComp) + (yComp * yComp), .5)
 
-
         tape.x = (100 * unitX + player.pos.x + 30) - 20
         tape.y = (100 * unitY + player.pos.y + 30) - 20
+        if (isNaN(tape.x)) {
+            tape.x = (100 + player.pos.x + 30) - 20
+            tape.y = player.pos.y + 30 - 20
+        }
         tape.theta = Math.atan(unitY / unitX)
     } else {
         tape.particles[tape.particles.length - 1][1][0] = tape.x + 10
@@ -331,7 +333,7 @@ function updatePlayer(dt) {
 
 
 function renderBG() {
-
+    //get random 
     //render background of
     //
 }
@@ -352,11 +354,11 @@ function renderWorld() {
         // }
         let p = platforms[i]
         canvas.fillStyle = "blue"
-        fillRect(p.pos.x, p.pos.y, p.size.x, p.size.y)
+        fillRect(p.pos.x - p.size.x / 2, p.pos.y - p.size.y / 2, p.size.x, p.size.y)
 
         drawImage(
-            p.pos.x - ((p.imgSize.x - p.size.x) / 2),
-            p.pos.y - ((p.imgSize.y - p.size.y) / 2),
+            p.pos.x - p.imgSize.x / 2,
+            p.pos.y - p.imgSize.y / 2,
             platforms[i].imgSize.x,
             platforms[i].imgSize.y,
             platforms[i].src)
@@ -411,14 +413,17 @@ function renderObjects() {
         default:
             frame = "Jelli-1"
     }
+    // canvas.fillStyle = "blue"
+    fillRect(player.pos.x - player.size.x / 2, player.pos.y - player.size.y / 2, player.size.x, player.size.y)
+
     if (player.direction == -1) {
         canvas.save()
         canvas.scale(-1, 1)
-        drawImage(0 - 60 - player.pos.x, player.pos.y, 60, 60, frame)
+        drawImage(0 - 60 - player.pos.x + player.size.x, player.pos.y - player.size.y / 2, 60, 60, frame)
         canvas.restore()
 
     } else {
-        drawImage(player.pos.x, player.pos.y, 60, 60, frame)
+        drawImage(player.pos.x - player.size.x / 2 - 5, player.pos.y - player.size.y / 2, 60, 60, frame)
 
     }
 
