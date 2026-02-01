@@ -9,7 +9,8 @@ keyHandler.setKeyBindings({
     "moveLeft": ["KeyA", "ArrowLeft"],
     "moveRight": ["KeyD", "ArrowRight"],
     'jump': ['Space', 'ArrowUp', 'KeyW'],
-    'throwTape': ['MouseLeft']
+    'throwTape': ['MouseLeft'],
+    'reset': ["KeyR"]
 })
 let WON = false
 
@@ -27,6 +28,18 @@ let gameConsts = {
 let mouseX = 400
 let mouseY = 400
 const HOWLER_POS_SCALE = 0.01
+
+const lowBubble = new Howl({
+    src: ['/public/bubbleloop.m4a'],
+    volume: 0.1,
+    rate: .7
+})
+
+const descendingGate = new Howl({
+    src: ['/public/bubbleloop.m4a'],
+    volume: 0.6,
+    rate: 3.5
+})
 
 const footstepSFX = new Howl({
     src: ['/public/footstep.wav'],
@@ -194,7 +207,9 @@ let templateLevel2 = {
         [500, 380]
     ],
     text: [
-        [250, 100, "Hold-click to swing with your tape!", "#897e61", 30],
+        [250, 100, "Hold-click to swing with your tape!", "#897e61", 20],
+        [250, 120, "[R] to reset", "#897e61", 20],
+
     ],
     backgroundSRC: "",
     features: [],
@@ -252,7 +267,8 @@ let player = {
         idle: 0,
         moving: 1,
         slide: 2,
-        jump: 3
+        jump: 3,
+        swing: 4
     },
     animation: [
         "Jelli-1",
@@ -463,6 +479,7 @@ function drawTape(dt) {
                 tape.launched = false;
                 tape.hit = false
             } else {
+                player.moveState = player.moveStates.swing
                 const GRAPPLE_FORCE = 2000
                 player.vel = Vec.add(player.vel, Vec.scale(
                     Vec.unit(Vec.sub(curParticle.end, curParticle.start)),
@@ -586,7 +603,7 @@ function updatePlayer(dt) {
 
     player.pos = Vec.add(player.pos, dPos);
 
-    if (player.pos.y > 450) {
+    if (player.pos.y > 450 || keyHandler.keyStates.has("reset")) {
         player.pos.x = level.data.respawnPosition[0]
         player.pos.y = level.data.respawnPosition[1]
         tape.particles = []
@@ -671,6 +688,7 @@ function renderWorld() {
         for (let i = 0; i < level.data.tentacleTraps.length; i++) {
             let t = level.data.tentacleTraps
             drawImage(t[i][0], t[i][1], 70, 70, "Tentacles-" + (animationTicks % 5))
+            if (!lowBubble.playing()) { lowBubble.play() }
         }
     }
     drawImage(775, level.data.blockerY, 25, 75, "Door-" + (animationTicks % 5))
@@ -686,10 +704,15 @@ function renderWorld() {
             platforms[i].src)
     }
     if (level.numMaskedEyes == 0) {
+        if (!descendingGate.playing()) { descendingGate.play() }
         level.data.blockerY += 2
+    } else {
+        level.data.blockerY = level.data.initialBlockerY
+        descendingGate.stop()
     }
     if (level.data.blockerY - level.data.initialBlockerY > 75) {
         level.blocked = false
+        descendingGate.stop()
     }
 }
 function nextLevel() {
@@ -759,10 +782,12 @@ function renderObjects(dt) {
             break;
         case player.moveStates.slide:
             frame = "Jelli-1"
-
+            break;
+        case player.moveStates.swing:
+            frame = "Jelli-swing"
             break;
         default:
-            frame = "Jelli-1"
+            frame = "Jelli-idle"
     }
     // canvas.fillStyle = "blue"
     // fillRect(player.pos.x - player.size.x / 2, player.pos.y - player.size.y / 2, player.size.x, player.size.y)
