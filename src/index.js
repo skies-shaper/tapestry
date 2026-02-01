@@ -10,6 +10,7 @@ keyHandler.setKeyBindings({
     "moveRight": ["KeyD", "ArrowRight"],
     'jump': ['Space', 'ArrowUp', 'KeyW'],
 })
+let WON = false
 
 let inGameplay = false
 const gameScreenCvs = document.getElementById("gamescreen")
@@ -101,6 +102,8 @@ let platformTypes = {
     large2: 1,
     thin: 2
 }
+// // setFont("20px Lacquer")
+// console.log(canvas.measureText("Cover up all of the ").width / gameConsts.scale)
 
 function platform(src, px, py) {
     if (src == platformTypes.large2)
@@ -151,7 +154,16 @@ let templateLevel = {
     respawnPosition: [50, 250],
     blockerY: 200,
     initialBlockerY: 200,
-    blocked: false
+    blocked: false,
+    text: [
+        [250, 100, "Welcome to Tapestry!", "#897e61", 30],
+        [250, 130, "Move your mouse to aim your tape!", "#897e61", 20],
+        [250, 150, "Click to throw it", "#897e61", 20],
+        [250, 170, "Cover up all of the ", "#897e61", 20],
+        [450, 170, "Forest Beast's Eyes", "#d005bf", 20],
+        [250, 190, "in order to be freed from each level", "#897e61", 20],
+    ]
+
 }
 let templateLevel2 = {
     eyePositions: [[300, 200, 0, true], [600, 100, 3, true]],
@@ -163,10 +175,24 @@ let templateLevel2 = {
         platform(platformTypes.large2, 800, 425),
         platform(platformTypes.large1, 800, 360),
         platform(platformTypes.large1, 850, 305),
+        platform(platformTypes.thin, 75, 0),
+        platform(platformTypes.thin, 225, 0),
+        platform(platformTypes.thin, 375, 0),
+        platform(platformTypes.thin, 500, 0),
+        platform(platformTypes.thin, 650, 0),
+        platform(platformTypes.thin, 800, 0),
+
+        platform(platformTypes.large1, 850, 150),
+        platform(platformTypes.large2, 850, 90),
+        platform(platformTypes.large1, 850, 30)
+
     ],
     tentacleTraps: [
         [430, 380],
         [500, 380]
+    ],
+    text: [
+        [250, 100, "Hold-click to swing with your tape!", "#897e61", 30],
     ],
     backgroundSRC: "",
     features: [],
@@ -188,7 +214,8 @@ let level = {
     ID: 0,
     backgroundOffset: 0,
     numMaskedEyes: 0,
-    data: {}
+    data: {},
+    blocked: true
 };
 
 const COYOTE_TIME = 5
@@ -306,9 +333,21 @@ function countTPS() {
 }
 
 function update(dt) {
+
     if (Howler.ctx && Howler.ctx.state === 'running') { // configure sound listener
         Howler.orientation(0, 0, 1, 0, -1, 0); // flip y to make +y down
         Howler.pos(gameConsts.width / 2 * HOWLER_POS_SCALE, gameConsts.height / 2 * HOWLER_POS_SCALE, -5)
+    }
+    if (WON) {
+        drawImage(0 - 350 * (Math.sin(totalTicks / 700) + 1), 0, 1600, 450, "BG")
+        drawImage(0, 0, 800, 400, "title")
+        setFont("30px Lacquer")
+        canvas.fillStyle = "#b8ab88"
+        drawText("Congratulations!", 280, 250)
+        drawText("You have evaded the ", 150, 300)
+        canvas.fillStyle = "#d005bf"
+        drawText("Forest Beast", 462, 300)
+        return
     }
     if (inGameplay) {
         if (totalTicks % 3 == 0) {
@@ -351,7 +390,7 @@ function update(dt) {
         nextLevel()
     })
 
-    setFont("30px Fredoka")
+    setFont("30px Lacquer")
     canvas.fillStyle = "#b8ab88"
 
     let text = "A normal game about a racoon"
@@ -424,6 +463,9 @@ function drawTape() {
 
 
 function updatePlayer(dt) {
+    // console.log(player.pos.x + "," + player.pos.y)
+    // console.log(level.blocked)
+
     player.moveState = player.moveStates.idle
 
     // check if grounded (check collision rect below player)
@@ -518,9 +560,13 @@ function updatePlayer(dt) {
     if (player.pos.x < 0) {
         player.pos.x = 0
     }
-    if (player.pos.x > 780) {
+
+    if (player.pos.x > 760) {
+        console.log("over")
+
         if (level.blocked) {
-            player.pos.x == 780
+            console.log("stop")
+            player.pos.x = 760
         }
         else {
             nextLevel()
@@ -583,6 +629,7 @@ function renderBG() {
     else {
         console.log(level)
     }
+
 }
 
 
@@ -614,6 +661,10 @@ function renderWorld() {
     }
 }
 function nextLevel() {
+    if (level.ID >= levelStorage.length) {
+        WON = true
+        return
+    }
     console.log(":DD")
     level.data = levelStorage[level.ID]
     level.backgroundOffset = Math.floor(Math.random() * 800)
@@ -624,6 +675,7 @@ function nextLevel() {
     player.pos.y = level.data.respawnPosition[1]
     level.numMaskedEyes = level.data.eyePositions.length
     tape.particles = []
+    level.blocked = true
 }
 
 sizeCvs()
@@ -653,7 +705,15 @@ function sizeCvs() {
 function renderObjects() {
 
     drawTape()
+    if (level.data.text != undefined) {
+        for (let i = 0; i < level.data.text.length; i++) {
+            let t = level.data.text[i]
+            canvas.fillStyle = t[3]
+            setFont(t[4] + "px Lacquer")
+            drawText(t[2], t[0], t[1])
 
+        }
+    }
     // drawImage(100, 100, 100, 100, "Tentacles-" + (animationTicks % 7))
     // drawImage(200, 100, 100, 100, "Tentacles-" + (animationTicks % 7))
     let frame
@@ -725,7 +785,7 @@ function fillRect(x, y, w, h) {
 }
 
 function setFont(font) {
-    canvas.font = font.substring(0, font.indexOf("p")) * gameConsts.scale + "px Fredoka"
+    canvas.font = font.substring(0, font.indexOf("p")) * gameConsts.scale + "px Lacquer"
 }
 
 function drawText(str, x, y, maxWidth) {
