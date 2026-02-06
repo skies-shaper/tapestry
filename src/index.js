@@ -67,7 +67,7 @@ const landSFX = new Howl({
 
 const musicLoop = new Howl({
     src: [publicPath('ost-loop.mp3')],
-    volume: 0.4,
+    volume: 1,
     loop: true,
     html: true
 })
@@ -81,7 +81,7 @@ const howlBg = new Howl({
 
 const musicStart = new Howl({
     src: [publicPath('ost-start.mp3')],
-    volume: 0.4,
+    volume: 1,
     html: true,
     onend: () => {
         musicLoop.play();
@@ -493,8 +493,8 @@ const GROUND_FRICTION = 0.999999
 
 const GRAVITY_ACCEL = 600
 const GRAVITY_DOWNWARDS_ACCEL = 600
-const GROUND_MOVE_ACCEL = 1000
-const AIR_MOVE_ACCEL = 300
+const GROUND_MOVE_ACCEL = 1300
+const AIR_MOVE_ACCEL = 200
 
 let player = {
     direction: 1,
